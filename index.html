@@ -303,8 +303,8 @@
     if (!ed) h += '<div class="msg">👁 Лише перегляд.</div>';
     if (ed) h += '<div class="sec"><h2>Нотатка</h2><div class="card"><textarea id="fNote" maxlength="800" placeholder="Що нового? Напр.: подзвонив, ЛПР просив набрати в пʼятницю"></textarea></div></div>' +
       '<button class="save" id="saveBtn">Зберегти</button><div class="msg" id="msg"></div>' +
-      (b.status === 'green' ? '' : '<div class="sec"><h2>Змінити статус</h2><div class="card"><div class="seg" id="stSeg">' +
-        [['yellow', '🟡 Думає'], ['blue', '🔵 Зустріч'], ['white', '⚪ Вийти на ЛПР'], ['red', '🔴 Відпрац.']].map(function (x) { return '<button data-s="' + x[0] + '">' + x[1] + '</button>'; }).join('') +
+      (b.status === 'green' ? '' : '<div class="sec"><h2>' + (isOpenSt(b.status) ? 'Перенести або змінити статус' : 'Змінити статус') + '</h2><div class="card"><div class="seg" id="stSeg">' +
+        (isOpenSt(b.status) ? '<button data-s="' + b.status + '" data-move="1">🗓 Перенести</button>' : '') + [['yellow', '🟡 Думає'], ['blue', '🔵 Зустріч'], ['white', '⚪ Вийти на ЛПР'], ['red', '🔴 Відпрац.']].map(function (x) { return '<button data-s="' + x[0] + '">' + x[1] + '</button>'; }).join('') +
         '</div><div id="stForm" style="display:none">' +
         '<textarea id="stWhy" maxlength="800" placeholder="Що зʼясували і чому змінюєш статус"></textarea>' +
         '<div class="field" id="stWhenF"><label>Коли</label><input id="stWhen" placeholder="напр. завтра 11:00 або пт 15:30"></div>' +
@@ -322,7 +322,8 @@
           document.querySelectorAll('#stSeg button').forEach(function (x) { x.classList.toggle('on', x === bt); });
           $('#stForm').style.display = ''; $('#stBtn').style.display = '';
           $('#stWhenF').style.display = pick === 'red' ? 'none' : '';
-          $('#stWhy').placeholder = pick === 'red' ? 'Чому відпрацьовано: що сказав власник' : 'Що зʼясували і що робитимеш далі';
+          $('#stWhy').placeholder = pick === 'red' ? 'Чому відпрацьовано: що сказав власник' : bt.dataset.move ? 'Чому переносимо: що сказав ЛПР' : 'Що зʼясували і що робитимеш далі';
+          $('#stBtn').textContent = bt.dataset.move ? 'Перенести' : 'Змінити статус';
           $('#stMsg').textContent = ''; $('#stMsg').className = 'msg';
         };
       });
@@ -332,7 +333,7 @@
   function evRow(e) {
     var head = [ (KIND[e.kind] || '•') + ' ' + dm(e.date) + (e.start ? ' ' + t(e.start) : '') ];
     if (e.kind === 'visit') head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін');
-    if (e.kind === 'status') head.push('статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + ST[e.status_after || '']);
+    if (e.kind === 'status') head.push(e.status_before === e.status_after ? '🗓 перенесено' + (e.next_dt ? ' на ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '') : 'статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + ST[e.status_after || '']);
     if (e.result === 'nbt') head.push('НБТ');
     if (e.door) head.push('двері');
     var txt = e.comment ? '<div class="evt">' + esc(e.comment) + '</div>' : '';
@@ -373,8 +374,20 @@
       btn.disabled = false;
       var i = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
       if (i >= 0 && r.business) S.data.businesses[i] = r.business;
-      if (p.note) openBiz(b.id);
       render();
+      if (r.suggest) {
+        msg.innerHTML = '✅ Нотатку збережено. Перенести ' + (b.next_kind === 'meeting' ? 'зустріч' : 'наступний крок') + ' на <b>' + esc(r.suggest.label) + '</b>?' +
+          '<button class="save" id="sugBtn" style="width:100%;margin:8px 0 0">🗓 Так, перенести на ' + esc(r.suggest.label) + '</button>';
+        $('#sugBtn').onclick = function () {
+          $('#sugBtn').disabled = true;
+          api('status', { id: b.id, status: b.status, note: p.note, when: r.suggest.when }).then(function (r2) {
+            haptic('medium');
+            var j = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
+            if (j >= 0 && r2.business) S.data.businesses[j] = r2.business;
+            openBiz(b.id); render();
+          }).catch(function (e) { msg.className = 'msg err'; msg.textContent = String(e && e.message || '').length > 15 ? e.message : errText(e); });
+        };
+      } else if (p.note) openBiz(b.id);
     }).catch(function (e) {
       btn.disabled = false; msg.className = 'msg err';
       msg.textContent = /Телефон/.test(e.message) ? e.message : errText(e);
