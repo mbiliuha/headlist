@@ -212,15 +212,16 @@
     var sub = [];
     if (b.lpr_name) sub.push(esc(b.lpr_name));
     if (b.lpr_phone) sub.push('<a href="tel:+' + esc(b.lpr_phone) + '" onclick="event.stopPropagation()">' + esc(phoneFmt(b.lpr_phone)) + '</a>');
-    if (!timeCol && b.next_dt && isOpenSt(b.status)) sub.push((b.overdue ? '⏰ ' : '↪ ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt));
+    if (!timeCol && b.next_dt && (isOpenSt(b.status) || b.next_kind === 'payment')) sub.push((b.overdue ? '⏰ ' : '↪ ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt));
     if (b.next_kind === 'meeting' && timeCol) sub.push('зустріч');
+    if (b.next_kind === 'payment' && timeCol) sub.push('💰 дзвінок щодо оплати');
     return '<div class="item" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + (b.status || 'none') + '"></span><div class="body">' +
       '<div class="name">' + esc(b.name) + '</div>' + (sub.length ? '<div class="sub">' + sub.join(' · ') + '</div>' : '') +
       (b.last_comment ? '<div class="note">' + esc(b.last_comment) + '</div>' : '') + '</div></div>';
   }
   function mixOf(list) {
     var n = {}; list.forEach(function (b) { n[b.status] = (n[b.status] || 0) + 1; });
-    return [['blue', '🔵'], ['yellow', '🟡'], ['white', '⚪']].filter(function (x) { return n[x[0]]; }).map(function (x) { return x[1] + ' ' + n[x[0]]; }).join('  ');
+    return [['blue', '🔵'], ['yellow', '🟡'], ['white', '⚪'], ['green', '💰']].filter(function (x) { return n[x[0]]; }).map(function (x) { return x[1] + ' ' + n[x[0]]; }).join('  ');
   }
   function group(title, list, cls, timeCol) {
     if (!list.length) return '';
@@ -247,7 +248,7 @@
 
   function tasksView() {
     var x = S.data, today = d(x.now), tomorrow = addDays(today, 1);
-    var open = x.businesses.filter(function (b) { return isOpenSt(b.status); });
+    var open = x.businesses.filter(function (b) { return isOpenSt(b.status) || (b.status === 'green' && b.next_kind === 'payment' && b.next_dt); });
     open.sort(function (a, b) { return String(a.next_dt || '9').localeCompare(String(b.next_dt || '9')); });
     var over = [], td = [], tm = [], later = [], nodate = [];
     open.forEach(function (b) {
@@ -290,8 +291,8 @@
   function renderBiz(r) {
     var b = r.business, ed = r.editable, el = $('#detail');
     var next = '';
-    if (b.next_dt && isOpenSt(b.status)) next = '<div class="next' + (b.overdue ? ' over' : '') + '">' + (b.overdue ? '⏰ Прострочено: ' : '↪ ') +
-      (b.next_kind === 'meeting' ? 'зустріч ' : 'вийти на ЛПР ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) + (b.deferred ? ' · відкладено: ' + esc(b.deferred) : '') + '</div>';
+    if (b.next_dt && (isOpenSt(b.status) || b.next_kind === 'payment')) next = '<div class="next' + (b.overdue ? ' over' : '') + '">' + (b.overdue ? '⏰ Прострочено: ' : '↪ ') +
+      (b.next_kind === 'meeting' ? 'зустріч ' : b.next_kind === 'payment' ? '💰 дзвінок щодо оплати ' : 'вийти на ЛПР ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) + (b.deferred ? ' · відкладено: ' + esc(b.deferred) : '') + '</div>';
     var phone = b.lpr_phone ? '<a class="callbtn" href="tel:+' + esc(b.lpr_phone) + '">📞 Дзвонити</a>' : '';
     var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>' + esc(b.name) + '</h1>' +
       '<span class="pill"><span class="dot s-' + (b.status || 'none') + '" style="margin:0"></span>' + ST[b.status || ''] + (b.status === 'red' ? (b.red_kind === 'exhausted' ? ' · пробити неможливо' : b.red_kind === 'meeting' ? ' · відмова від зустрічі (тел.)' : ' · відмова ЛПР') : '') + '</span>' + next + '</div>';
