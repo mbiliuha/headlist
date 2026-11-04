@@ -428,7 +428,7 @@
       Object.keys(offices).map(function (o) { return opt('office:' + o, 'Офіс ' + o + ' (усі агенти)', f.target); }).join('') + opt('*', 'Усі агенти', f.target) + '</select></div>' +
       '<div class="seg" id="gLvl"><button data-v="view" class="' + (f.level === 'view' ? 'on' : '') + '">👁 Перегляд</button><button data-v="edit" class="' + (f.level === 'edit' ? 'on' : '') + '">✏️ Редагування</button></div>' +
       '<div class="seg" id="gTerm">' + TERMS.map(function (x) { return '<button data-v="' + x[0] + '" class="' + (f.term === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
-      '<button class="save" id="gSave">Видати</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="gCancel">Скасувати</button><div class="msg" id="gMsg">Редагування = правка ЛПР, телефону й нотаток. Статуси змінює лише сам агент у боті.</div></div>';
+      '<button class="save" id="gSave">Видати</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="gCancel">Скасувати</button><div class="msg" id="gMsg">Редагування = правка ЛПР, телефону, нотаток і статусу (з поясненням). Договір — лише через бота.</div></div>';
   }
   function personForm(r) {
     var p = A.person;
