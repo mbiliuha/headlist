@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Хед-лист</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #ffffff);
+    --bg2: var(--tg-theme-secondary-bg-color, #f2f3f5);
+    --text: var(--tg-theme-text-color, #111111);
+    --hint: var(--tg-theme-hint-color, #8a8f98);
+    --link: var(--tg-theme-link-color, #2b7de9);
+    --btn: var(--tg-theme-button-color, #2b7de9);
+    --btn-text: var(--tg-theme-button-text-color, #ffffff);
+    --sep: color-mix(in srgb, var(--hint) 25%, transparent);
+    --red: #e5484d; --yellow: #f5b400; --blue: #3b82f6; --green: #22a861; --gray: #a0a4ab;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg2); color: var(--text); font: 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { padding-bottom: env(safe-area-inset-bottom); }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  header { background: var(--bg); padding: 12px 16px 10px; position: sticky; top: 0; z-index: 5; border-bottom: 1px solid var(--sep); }
+  .row { display: flex; align-items: center; gap: 8px; }
+  .who { font-weight: 600; font-size: 17px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  select { font: inherit; color: var(--text); background: var(--bg2); border: 0; border-radius: 10px; padding: 6px 10px; max-width: 55%; }
+  .stats { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .stat { background: var(--bg2); border-radius: 10px; padding: 5px 9px; font-size: 14px; white-space: nowrap; }
+  .stat b { font-weight: 700; }
+  .stat.bad b { color: var(--red); }
+  .tabs { display: flex; background: var(--bg2); border-radius: 10px; padding: 3px; margin-top: 10px; }
+  .tab { flex: 1; text-align: center; padding: 7px 4px; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--hint); border: 0; background: none; font-family: inherit; }
+  .tab.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .banner { margin: 10px 12px 0; background: color-mix(in srgb, var(--btn) 14%, var(--bg)); border-radius: 12px; padding: 10px 12px; font-size: 15px; }
+  .group { margin: 14px 0 0; }
+  .gtitle { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--hint); padding: 0 16px 6px; display: flex; justify-content: space-between; }
+  .gtitle.over { color: var(--red); }
+  .list { background: var(--bg); border-top: 1px solid var(--sep); border-bottom: 1px solid var(--sep); }
+  .item { display: flex; gap: 10px; padding: 11px 16px; align-items: flex-start; border-bottom: 1px solid var(--sep); cursor: pointer; }
+  .item:last-child { border-bottom: 0; }
+  .item:active { background: var(--bg2); }
+  .time { width: 48px; flex: none; font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .time.over { color: var(--red); }
+  .time small { display: block; font-weight: 400; font-size: 12px; color: var(--hint); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; margin-top: 6px; background: var(--gray); }
+  .s-yellow { background: var(--yellow); } .s-blue { background: var(--blue); } .s-green { background: var(--green); } .s-red { background: var(--red); }
+  .body { flex: 1; min-width: 0; }
+  .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub { font-size: 14px; color: var(--hint); margin-top: 1px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .sub a { color: var(--link); text-decoration: none; font-weight: 500; }
+  .note { font-size: 14px; margin-top: 3px; color: var(--text); opacity: .8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .empty { text-align: center; color: var(--hint); padding: 28px 16px; font-size: 15px; }
+  .search { padding: 10px 12px 0; }
+  .search input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--sep); border-radius: 12px; padding: 10px 12px; outline: none; }
+  .chips { display: flex; gap: 6px; padding: 10px 12px 0; overflow-x: auto; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; }
+  .chip.on { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
+  /* картка бізнесу */
+  #detail { position: fixed; inset: 0; background: var(--bg2); overflow-y: auto; z-index: 20; display: none; }
+  #detail.show { display: block; }
+  .dhead { background: var(--bg); padding: 14px 16px; border-bottom: 1px solid var(--sep); }
+  .dhead h1 { font-size: 21px; margin: 0; line-height: 1.25; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; margin-top: 6px; padding: 3px 10px; border-radius: 999px; background: var(--bg2); }
+  .next { margin-top: 8px; font-size: 15px; }
+  .next.over { color: var(--red); font-weight: 600; }
+  .sec { margin-top: 14px; }
+  .sec h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--hint); margin: 0 16px 6px; font-weight: 500; }
+  .card { background: var(--bg); border-top: 1px solid var(--sep); border-bottom: 1px solid var(--sep); padding: 4px 16px; }
+  .field { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--sep); }
+  .field:last-child { border-bottom: 0; }
+  .field label { width: 74px; flex: none; color: var(--hint); font-size: 14px; }
+  .field input, textarea { flex: 1; min-width: 0; font: inherit; color: var(--text); background: transparent; border: 0; outline: none; padding: 4px 0; }
+  .callbtn { flex: none; background: var(--green); color: #fff; border-radius: 999px; padding: 6px 12px; text-decoration: none; font-size: 14px; font-weight: 600; }
+  textarea { width: 100%; resize: none; min-height: 64px; padding: 10px 0; }
+  .save { display: block; width: calc(100% - 32px); margin: 12px 16px 0; background: var(--btn); color: var(--btn-text); border: 0; border-radius: 12px; padding: 12px; font: inherit; font-weight: 600; }
+  .save:disabled { opacity: .5; }
+  .msg { margin: 8px 16px 0; font-size: 14px; color: var(--hint); min-height: 18px; }
+  .msg.err { color: var(--red); }
+  .ev { padding: 10px 0; border-bottom: 1px solid var(--sep); }
+  .ev:last-child { border-bottom: 0; }
+  .evh { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--hint); }
+  .evh .dot { margin-top: 0; }
+  .evt { font-size: 15px; margin-top: 3px; white-space: pre-wrap; word-wrap: break-word; }
+  .evn { font-size: 14px; margin-top: 3px; color: var(--hint); white-space: pre-wrap; word-wrap: break-word; }
+  .back { background: none; border: 0; color: var(--link); font: inherit; padding: 0 0 8px; display: none; }
+  .noTg .back { display: inline-block; }
+  .spin { text-align: center; padding: 40px; color: var(--hint); }
+  .tag { font-size: 12px; padding: 1px 7px; border-radius: 999px; background: var(--bg2); color: var(--hint); }
+  .tag.edit { background: color-mix(in srgb, var(--green) 18%, var(--bg)); color: var(--green); }
+  .tag.off { text-decoration: line-through; }
+  .mini { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--red); border-radius: 10px; padding: 5px 10px; font: inherit; font-size: 14px; }
+  .addbtn { display: block; width: calc(100% - 24px); margin: 10px 12px 0; background: var(--bg); color: var(--link); border: 1px dashed var(--sep); border-radius: 12px; padding: 11px; font: inherit; font-weight: 600; }
+  .form { background: var(--bg); margin: 10px 12px 0; border-radius: 12px; padding: 4px 14px 12px; }
+  .form .field label { width: 92px; }
+  .form select { max-width: none; flex: 1; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0; }
+  .seg button { border: 1px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 10px; padding: 7px 11px; font: inherit; font-size: 14px; }
+  .seg button.on { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
+  .form .save { width: 100%; margin: 10px 0 0; }
+  .muted { opacity: .55; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="row"><div class="who" id="who">Хед-лист</div><select id="agentSel" style="display:none"></select></div>
+    <div class="stats" id="stats"></div>
+    <div class="tabs" id="tabs"><button class="tab on" data-tab="tasks">Наработки</button><button class="tab" data-tab="all">Усі бізнеси</button><button class="tab" data-tab="admin" id="tabAdmin" style="display:none">Доступи</button></div>
+  </header>
+  <div id="main"><div class="spin">Завантаження…</div></div>
+</div>
+
+<div id="detail"></div>
+
+<script>
+(function () {
+  'use strict';
+  // адреса Apps Script (веб-додаток бота)
+  var API = 'https://script.google.com/macros/s/AKfycbz3pcpvLKDI_dqep5V_RSkmkxvB0Vv4DuGqLpmXa_ECrQNSVabpdt0Ecj5UAvsr6Qn9Yg/exec';
+  var tg = window.Telegram && window.Telegram.WebApp;
+  var DEMO = /[?&]demo=1/.test(location.search);
+  // режим Apps Script: сторінка в iframe Google, initData беремо з адреси верхнього вікна
+  var GAS = !!(window.google && google.script && google.script.run);
+  var INIT = tg && tg.initData ? tg.initData : '';
+  var KEY = '';   // персональний ключ із кнопки бота (Apps Script підставляє його сюди)
+  if (!KEY) { var km = location.search.match(/[?&]k=([^&]+)/); if (km) KEY = decodeURIComponent(km[1]); }
+  var S = { me: null, agent: null, data: null, tab: 'tasks', q: '', filter: '' };
+  var ST = { green: 'Договір', red: 'Відпрацьовано', yellow: 'Думає', blue: 'Треба зустріч з ЛПР', '': 'Без статусу' };
+  var WD = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+
+  if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+  if (!tg || !tg.initData) document.body.classList.add('noTg');
+  function initFromHash(h) {
+    var m = String(h || '').replace(/^#/, '').split('&').filter(function (kv) { return kv.indexOf('tgWebAppData=') === 0; })[0];
+    return m ? decodeURIComponent(m.slice(13)) : '';
+  }
+
+  function $(s) { return document.querySelector(s); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function d(dt) { return String(dt || '').slice(0, 10); }
+  function t(dt) { return String(dt || '').slice(11, 16); }
+  function dm(s) { var a = String(s).split('-'); return a[2] + '.' + a[1]; }
+  function wd(s) { var a = s.split('-'); return WD[new Date(Date.UTC(+a[0], +a[1] - 1, +a[2])).getUTCDay()]; }
+  function addDays(s, n) { var a = s.split('-'); var x = new Date(Date.UTC(+a[0], +a[1] - 1, +a[2]) + n * 864e5); return x.toISOString().slice(0, 10); }
+  function phoneFmt(p) { return p && p.length === 12 ? '+' + p.slice(0, 2) + ' ' + p.slice(2, 5) + ' ' + p.slice(5, 8) + ' ' + p.slice(8, 10) + ' ' + p.slice(10) : (p || ''); }
+  function haptic(k) { try { tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred(k || 'light'); } catch (e) {} }
+
+  function api(action, p) {
+    if (DEMO) return Promise.resolve(demo(action, p));
+    if (GAS) return new Promise(function (res, rej) {
+      google.script.run.withSuccessHandler(function (s) {
+        var r = JSON.parse(s); if (r.ok) res(r.data); else rej(new Error(r.error || 'server'));
+      }).withFailureHandler(function () { rej(new Error('server')); }).miniApi({ api: action, init: INIT, key: KEY, p: p ? JSON.stringify(p) : '' });
+    });
+    var url = API + '?api=' + action + '&init=' + encodeURIComponent(INIT) + (KEY ? '&key=' + encodeURIComponent(KEY) : '') + (p ? '&p=' + encodeURIComponent(JSON.stringify(p)) : '');
+    return fetch(url).then(function (r) { return r.json(); }).then(function (r) {
+      if (!r.ok) throw new Error(r.error || 'server');   // коротке слово (auth/forbidden) або речення для людини
+      return r.data;
+    });
+  }
+  function errText(e) {
+    var m = String(e && e.message || e);
+    if (m === 'auth') return 'Відкрий застосунок через бота (кнопка «📱 Хед-лист»).';
+    if (m === 'not_agent') return 'Тебе немає в списку агентів. Напиши менеджеру.';
+    if (m === 'forbidden') return 'Немає доступу.';
+    return 'Не вдалося завантажити. Перевір інтернет і спробуй ще раз.';
+  }
+
+  // ── завантаження ──
+  function boot() {
+    api('me').then(function (me) {
+      S.me = me; S.agent = me.me.role === 'agent' ? me.me.username : (me.agents.filter(function (a) { return a.username !== me.me.username; })[0] || me.me).username;
+      $('#who').textContent = me.me.role === 'agent' ? me.me.name : 'Команда';
+      if (me.me.role !== 'agent' && me.agents.length) {
+        var sel = $('#agentSel');
+        sel.innerHTML = me.agents.filter(function (a) { return a.username !== me.me.username || me.agents.length === 1; })
+          .map(function (a) { return '<option value="' + esc(a.username) + '">' + esc(a.name) + (a.level === 'edit' ? ' ✏️' : ' 👁') + '</option>'; }).join('');
+        sel.value = S.agent; sel.style.display = '';
+        sel.onchange = function () { S.agent = sel.value; load(); };
+      }
+      if (me.me.admin) $('#tabAdmin').style.display = '';
+      if (!me.agents.length) { S.tab = 'admin'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === 'admin'); }); }
+      if (me.agents.length) load(); else if (me.me.admin) render(); else $('#main').innerHTML = '<div class="empty">Доступу до даних агентів поки немає. Його видає власник.</div>';
+    }).catch(function (e) { $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  }
+  function load() {
+    $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
+    api('list', { agent: S.agent }).then(function (data) { S.data = data; render(); })
+      .catch(function (e) { $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  }
+
+  // ── шапка ──
+  function stats() {
+    var x = S.data, n = x.norms, td = x.today, wk = x.week;
+    var late = x.now.slice(11, 16) >= '17:00';
+    function st(label, v, norm, alarm) { return '<span class="stat' + (late && v <= alarm ? ' bad' : '') + '">' + label + ' <b>' + v + '</b>/' + norm + '</span>'; }
+    $('#stats').innerHTML = st('🚪', td.doors, n.doors, n.doorsAlarm) + st('🤝 ЛПР', td.lpr, n.lpr, n.lprAlarm) +
+      '<span class="stat">⏱ ≥' + n.qualityMin + ' хв <b>' + td.quality + '</b></span>' +
+      '<span class="stat">тиждень ЛПР <b>' + wk.lpr + '</b>/' + n.weekLpr + '</span>';
+  }
+
+  function row(b, timeCol) {
+    var tm = '';
+    if (timeCol) {
+      var dd = d(b.next_dt), today = d(S.data.now);
+      tm = '<div class="time' + (b.overdue ? ' over' : '') + '">' + (b.next_dt ? t(b.next_dt) : '—') +
+        (dd && dd !== today ? '<small>' + wd(dd) + ' ' + dm(dd) + '</small>' : '') + '</div>';
+    }
+    var sub = [];
+    if (b.lpr_name) sub.push(esc(b.lpr_name));
+    if (b.lpr_phone) sub.push('<a href="tel:+' + esc(b.lpr_phone) + '" onclick="event.stopPropagation()">' + esc(phoneFmt(b.lpr_phone)) + '</a>');
+    if (!timeCol && b.next_dt && (b.status === 'yellow' || b.status === 'blue')) sub.push((b.overdue ? '⏰ ' : '↪ ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt));
+    if (b.next_kind === 'meeting' && timeCol) sub.push('зустріч');
+    return '<div class="item" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + (b.status || 'none') + '"></span><div class="body">' +
+      '<div class="name">' + esc(b.name) + '</div>' + (sub.length ? '<div class="sub">' + sub.join(' · ') + '</div>' : '') +
+      (b.last_comment ? '<div class="note">' + esc(b.last_comment) + '</div>' : '') + '</div></div>';
+  }
+  function group(title, list, cls, timeCol) {
+    if (!list.length) return '';
+    return '<div class="group"><div class="gtitle ' + (cls || '') + '"><span>' + title + '</span><span>' + list.length + '</span></div><div class="list">' +
+      list.map(function (b) { return row(b, timeCol); }).join('') + '</div></div>';
+  }
+
+  function render() {
+    if (S.tab === 'admin') return renderAdmin();
+    $('#agentSel').style.visibility = '';
+    if (!S.data) return load();
+    stats();
+    var x = S.data, html = '';
+    if (x.open) html += '<div class="banner">📌 Зараз у візиті з ' + t(x.open.start) + (x.open.bizName ? ': <b>' + esc(x.open.bizName) + '</b>' : '') + '</div>';
+    if (S.tab === 'tasks') html += tasksView(); else html += allView();
+    $('#main').innerHTML = html;
+    var inp = $('#q');
+    if (inp) { inp.value = S.q; inp.oninput = function () { S.q = inp.value; $('#allList').innerHTML = allList(); bindRows(); }; }
+    document.querySelectorAll('.chip').forEach(function (c) { c.onclick = function () { S.filter = c.dataset.f; haptic(); render(); }; });
+    bindRows();
+  }
+  function bindRows() { document.querySelectorAll('.item').forEach(function (el) { el.onclick = function () { openBiz(el.dataset.id); }; }); }
+
+  function tasksView() {
+    var x = S.data, today = d(x.now), tomorrow = addDays(today, 1);
+    var open = x.businesses.filter(function (b) { return b.status === 'yellow' || b.status === 'blue'; });
+    open.sort(function (a, b) { return String(a.next_dt || '9').localeCompare(String(b.next_dt || '9')); });
+    var over = [], td = [], tm = [], later = [], nodate = [];
+    open.forEach(function (b) {
+      if (!b.next_dt) return nodate.push(b);
+      var dd = d(b.next_dt);
+      if (dd < today) over.push(b); else if (dd === today) td.push(b); else if (dd === tomorrow) tm.push(b); else later.push(b);
+    });
+    var h = group('⏰ Прострочено', over, 'over', true) + group('Сьогодні', td, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true) + group('⚠️ Без дати', nodate, 'over', true);
+    return h || '<div class="empty">Наработок немає. Час на нові двері 🚪</div>';
+  }
+  function allView() {
+    var c = function (f, l) { return '<button class="chip' + (S.filter === f ? ' on' : '') + '" data-f="' + f + '">' + l + '</button>'; };
+    return '<div class="search"><input id="q" type="search" placeholder="Пошук: назва, ЛПР, телефон"></div>' +
+      '<div class="chips">' + c('', 'Усі') + c('yellow', '🟡 Думає') + c('blue', '🔵 Зустріч') + c('green', '🟢 Договір') + c('red', '🔴 Відпрац.') + '</div>' +
+      '<div class="group"><div class="list" id="allList">' + allList() + '</div></div>';
+  }
+  function allList() {
+    var q = S.q.toLowerCase().trim(), qd = q.replace(/\D/g, '');
+    var l = S.data.businesses.filter(function (b) {
+      if (S.filter && b.status !== S.filter) return false;
+      if (!q) return true;
+      return (b.name + ' ' + b.lpr_name).toLowerCase().indexOf(q) >= 0 || (qd.length >= 3 && String(b.lpr_phone).indexOf(qd) >= 0);
+    });
+    return l.length ? l.map(function (b) { return row(b, false); }).join('') : '<div class="empty">Нічого не знайдено</div>';
+  }
+
+  // ── картка бізнесу ──
+  var KIND = { visit: '🚪', call: '📞', message: '💬', note: '📝', status: '🔄' };
+  function openBiz(id) {
+    haptic();
+    var el = $('#detail');
+    el.innerHTML = '<div class="spin">Завантаження…</div>'; el.classList.add('show'); el.scrollTop = 0;
+    if (tg && tg.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(closeBiz); }
+    api('biz', { id: id }).then(function (r) { renderBiz(r); }).catch(function (e) { el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  }
+  function closeBiz() {
+    $('#detail').classList.remove('show');
+    if (tg && tg.BackButton) { tg.BackButton.hide(); tg.BackButton.offClick(closeBiz); }
+  }
+  function renderBiz(r) {
+    var b = r.business, ed = r.editable, el = $('#detail');
+    var next = '';
+    if (b.next_dt && (b.status === 'yellow' || b.status === 'blue')) next = '<div class="next' + (b.overdue ? ' over' : '') + '">' + (b.overdue ? '⏰ Прострочено: ' : '↪ ') +
+      (b.next_kind === 'meeting' ? 'зустріч ' : 'вийти на ЛПР ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) + (b.deferred ? ' · відкладено: ' + esc(b.deferred) : '') + '</div>';
+    var phone = b.lpr_phone ? '<a class="callbtn" href="tel:+' + esc(b.lpr_phone) + '">📞 Дзвонити</a>' : '';
+    var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>' + esc(b.name) + '</h1>' +
+      '<span class="pill"><span class="dot s-' + (b.status || 'none') + '" style="margin:0"></span>' + ST[b.status || ''] + (b.red_kind === 'exhausted' ? ' · пробити неможливо' : '') + '</span>' + next + '</div>';
+    h += '<div class="sec"><h2>Контакт</h2><div class="card">' +
+      '<div class="field"><label>Назва</label><input id="fName" value="' + esc(b.name) + '"' + (ed ? '' : ' disabled') + '></div>' +
+      '<div class="field"><label>ЛПР</label><input id="fLpr" value="' + esc(b.lpr_name) + '" placeholder="імʼя"' + (ed ? '' : ' disabled') + '></div>' +
+      '<div class="field"><label>Телефон</label><input id="fPhone" inputmode="tel" value="' + esc(b.lpr_phone) + '" placeholder="380…"' + (ed ? '' : ' disabled') + '>' + phone + '</div>' +
+      '</div></div>';
+    if (!ed) h += '<div class="msg">👁 Лише перегляд.</div>';
+    if (ed) h += '<div class="sec"><h2>Нотатка</h2><div class="card"><textarea id="fNote" maxlength="800" placeholder="Що нового? Напр.: подзвонив, ЛПР просив набрати в пʼятницю"></textarea></div></div>' +
+      '<button class="save" id="saveBtn">Зберегти</button><div class="msg" id="msg"></div>' +
+      (b.status === 'green' ? '' : '<div class="sec"><h2>Змінити статус</h2><div class="card"><div class="seg" id="stSeg">' +
+        [['yellow', '🟡 Думає'], ['blue', '🔵 Зустріч'], ['red', '🔴 Відпрац.']].map(function (x) { return '<button data-s="' + x[0] + '">' + x[1] + '</button>'; }).join('') +
+        '</div><div id="stForm" style="display:none">' +
+        '<textarea id="stWhy" maxlength="800" placeholder="Що зʼясували і чому змінюєш статус"></textarea>' +
+        '<div class="field" id="stWhenF"><label>Коли</label><input id="stWhen" placeholder="напр. завтра 11:00 або пт 15:30"></div>' +
+        '<div class="field" id="stFarF" style="display:none"><label>Причина</label><input id="stFar" placeholder="чому не раніше ніж за 2 робочі дні"></div>' +
+        '</div></div><button class="save" id="stBtn" style="display:none">Змінити статус</button><div class="msg" id="stMsg"></div></div>');
+    h += '<div class="sec"><h2>Історія</h2><div class="card">' + (r.events.length ? r.events.map(evRow).join('') : '<div class="empty">Порожньо</div>') + '</div></div><div style="height:24px"></div>';
+    el.innerHTML = h;
+    $('#bk').onclick = closeBiz;
+    if (ed) $('#saveBtn').onclick = function () { save(b); };
+    if (ed && $('#stSeg')) {
+      var pick = '';
+      document.querySelectorAll('#stSeg button').forEach(function (bt) {
+        bt.onclick = function () {
+          pick = bt.dataset.s; haptic();
+          document.querySelectorAll('#stSeg button').forEach(function (x) { x.classList.toggle('on', x === bt); });
+          $('#stForm').style.display = ''; $('#stBtn').style.display = '';
+          $('#stWhenF').style.display = pick === 'red' ? 'none' : '';
+          $('#stWhy').placeholder = pick === 'red' ? 'Чому відпрацьовано: що сказав власник' : 'Що зʼясували і що робитимеш далі';
+          $('#stMsg').textContent = ''; $('#stMsg').className = 'msg';
+        };
+      });
+      $('#stBtn').onclick = function () { setStatus(b, pick); };
+    }
+  }
+  function evRow(e) {
+    var head = [ (KIND[e.kind] || '•') + ' ' + dm(e.date) + (e.start ? ' ' + t(e.start) : '') ];
+    if (e.kind === 'visit') head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін');
+    if (e.kind === 'status') head.push('статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + ST[e.status_after || '']);
+    if (e.result === 'nbt') head.push('НБТ');
+    if (e.door) head.push('двері');
+    var txt = e.comment ? '<div class="evt">' + esc(e.comment) + '</div>' : '';
+    if (e.by) head.push('від @' + e.by);
+    var nt = e.notes ? '<div class="evn">📝 ' + esc(e.notes) + '</div>' : '';
+    var fl = e.flags ? '<div class="evn">⚠️ ' + esc(e.flags) + '</div>' : '';
+    return '<div class="ev"><div class="evh"><span class="dot s-' + (e.status_after || 'none') + '"></span>' + head.join(' · ') + '</div>' + txt + nt + fl + '</div>';
+  }
+  function setStatus(b, to) {
+    var p = { id: b.id, status: to, note: $('#stWhy').value, when: $('#stWhen').value, far: $('#stFar').value };
+    var btn = $('#stBtn'), msg = $('#stMsg');
+    btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Зберігаю…';
+    api('status', p).then(function (r) {
+      btn.disabled = false;
+      if (r && r.ok === false) {
+        msg.className = 'msg err'; msg.textContent = r.error;
+        if (r.far) { $('#stFarF').style.display = ''; $('#stFar').focus(); }
+        return;
+      }
+      haptic('medium');
+      var i = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
+      if (i >= 0 && r.business) S.data.businesses[i] = r.business;
+      openBiz(b.id); render();
+    }).catch(function (e) {
+      btn.disabled = false; msg.className = 'msg err';
+      var m = String(e && e.message || '');
+      msg.textContent = m.length > 15 ? m : errText(e);
+      if (/робоч/.test(m)) { $('#stFarF').style.display = ''; }
+    });
+  }
+  function save(b) {
+    var p = { id: b.id, name: $('#fName').value, lpr_name: $('#fLpr').value, lpr_phone: $('#fPhone').value.replace(/\s/g, ''), note: $('#fNote').value };
+    var btn = $('#saveBtn'), msg = $('#msg');
+    btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Зберігаю…';
+    api('update', p).then(function (r) {
+      haptic('medium');
+      msg.textContent = r.changed && r.changed.length ? '✅ Збережено: ' + r.changed.join(', ') : 'Нічого не змінилось';
+      btn.disabled = false;
+      var i = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
+      if (i >= 0 && r.business) S.data.businesses[i] = r.business;
+      if (p.note) openBiz(b.id);
+      render();
+    }).catch(function (e) {
+      btn.disabled = false; msg.className = 'msg err';
+      msg.textContent = /Телефон/.test(e.message) ? e.message : errText(e);
+    });
+  }
+
+
+  // ── доступи (лише власник) ──
+  var A = { data: null, form: null, person: null };
+  var TERMS = [['1h', '1 год'], ['3h', '3 год'], ['today', 'до кінця дня'], ['7d', '7 днів'], ['30d', '30 днів'], ['forever', 'безстроково']];
+  function fmtUntil(u) { return u ? wd(d(u)) + ' ' + dm(d(u)) + ' ' + t(u) : 'безстроково'; }
+  function renderAdmin() {
+    $('#stats').innerHTML = ''; $('#agentSel').style.visibility = 'hidden';
+    $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
+    api('admin').then(function (r) { A.data = r; drawAdmin(); }).catch(function (e) { $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  }
+  function drawAdmin() {
+    var r = A.data, ppl = {};
+    r.people.forEach(function (p) { ppl[p.username] = p; });
+    var h = '';
+    h += A.form ? grantForm(r) : '<button class="addbtn" id="gAdd">＋ Видати доступ</button>';
+    var act = r.grants.filter(function (g) { return g.active; }), old = r.grants.filter(function (g) { return !g.active; });
+    h += '<div class="group"><div class="gtitle"><span>Діють зараз</span><span>' + act.length + '</span></div><div class="list">' +
+      (act.length ? act.map(grantRow).join('') : '<div class="empty">Ніхто нічого не бачить, крім своїх даних</div>') + '</div></div>';
+    if (old.length) h += '<div class="group"><div class="gtitle"><span>Закінчились (14 днів)</span><span>' + old.length + '</span></div><div class="list">' + old.map(grantRow).join('') + '</div></div>';
+    h += A.person ? personForm(r) : '<button class="addbtn" id="pAdd">＋ Додати людину</button>';
+    h += '<div class="group"><div class="gtitle"><span>Люди</span><span>' + r.people.length + '</span></div><div class="list">' + r.people.map(personRow).join('') + '</div></div><div style="height:24px"></div>';
+    $('#main').innerHTML = h;
+    var ga = $('#gAdd'); if (ga) ga.onclick = function () { A.form = { level: 'view', term: '1h' }; drawAdmin(); };
+    var pa = $('#pAdd'); if (pa) pa.onclick = function () { A.person = { role: 'viewer', active: true, isNew: true }; drawAdmin(); };
+    document.querySelectorAll('[data-revoke]').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); revoke(b.dataset.revoke); }; });
+    document.querySelectorAll('[data-person]').forEach(function (el) { el.onclick = function () { var p = ppl[el.dataset.person]; A.person = { username: p.username, name: p.name, role: p.role, office: p.office, active: p.active }; drawAdmin(); window.scrollTo(0, 0); }; });
+    bindForms();
+  }
+  function grantRow(g) {
+    return '<div class="item' + (g.active ? '' : ' muted') + '" style="cursor:default"><div class="body"><div class="name">' + esc(g.who_name) + ' → ' + esc(g.target_name) + '</div>' +
+      '<div class="sub"><span class="tag' + (g.level === 'edit' ? ' edit' : '') + '">' + (g.level === 'edit' ? '✏️ редагування' : '👁 перегляд') + '</span>' +
+      (g.active ? (g.until ? 'до ' + esc(fmtUntil(g.until)) : 'безстроково') : 'закінчився ' + esc(fmtUntil(g.until))) + '</div></div>' +
+      (g.active ? '<button class="mini" data-revoke="' + esc(g.id) + '">Забрати</button>' : '') + '</div>';
+  }
+  var ROLE = { agent: 'агент', instructor: 'інструктор', manager: 'менеджер', viewer: 'перегляд', owner: 'власник' };
+  function personRow(p) {
+    return '<div class="item' + (p.active ? '' : ' muted') + '" data-person="' + esc(p.username) + '"><div class="body"><div class="name">' + esc(p.name || p.username) + '</div>' +
+      '<div class="sub">@' + esc(p.username) + ' · ' + esc(ROLE[p.role] || p.role) + (p.office ? ' · ' + esc(p.office) : '') + ' · ' +
+      (p.active ? (p.linked ? '✅ у боті' : '⏳ ще не натиснув /start') : '🔒 вимкнено') + '</div></div></div>';
+  }
+  function opt(v, l, sel) { return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(l) + '</option>'; }
+  function grantForm(r) {
+    var f = A.form;
+    var whoOpts = r.people.filter(function (p) { return p.active && p.role !== 'owner'; });
+    var tgtOpts = r.people.filter(function (p) { return p.active && p.role === 'agent'; });
+    if (!f.who && whoOpts[0]) f.who = whoOpts[0].username;
+    if (!f.target) f.target = tgtOpts[0] ? tgtOpts[0].username : '*';
+    var offices = {}; tgtOpts.forEach(function (p) { if (p.office) offices[p.office] = 1; });
+    return '<div class="form"><div class="field"><label>Кому</label><select id="gWho">' + whoOpts.map(function (p) { return opt(p.username, (p.name || p.username) + ' (' + (ROLE[p.role] || p.role) + ')', f.who); }).join('') + '</select></div>' +
+      '<div class="field"><label>Чиї дані</label><select id="gTgt">' + tgtOpts.map(function (p) { return opt(p.username, p.name || p.username, f.target); }).join('') +
+      Object.keys(offices).map(function (o) { return opt('office:' + o, 'Офіс ' + o + ' (усі агенти)', f.target); }).join('') + opt('*', 'Усі агенти', f.target) + '</select></div>' +
+      '<div class="seg" id="gLvl"><button data-v="view" class="' + (f.level === 'view' ? 'on' : '') + '">👁 Перегляд</button><button data-v="edit" class="' + (f.level === 'edit' ? 'on' : '') + '">✏️ Редагування</button></div>' +
+      '<div class="seg" id="gTerm">' + TERMS.map(function (x) { return '<button data-v="' + x[0] + '" class="' + (f.term === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
+      '<button class="save" id="gSave">Видати</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="gCancel">Скасувати</button><div class="msg" id="gMsg">Редагування = правка ЛПР, телефону й нотаток. Статуси змінює лише сам агент у боті.</div></div>';
+  }
+  function personForm(r) {
+    var p = A.person;
+    return '<div class="form"><div class="field"><label>Нік Telegram</label><input id="pUser" placeholder="без @" value="' + esc(p.username || '') + '"' + (p.isNew ? '' : ' disabled') + '></div>' +
+      '<div class="field"><label>Імʼя</label><input id="pName" value="' + esc(p.name || '') + '"></div>' +
+      '<div class="field"><label>Роль</label><select id="pRole">' + r.roles.map(function (x) { return opt(x.id, x.name, p.role); }).join('') + '</select></div>' +
+      '<div class="field"><label>Офіс</label><input id="pOffice" placeholder="необовʼязково" value="' + esc(p.office || '') + '"></div>' +
+      (p.isNew ? '' : '<div class="seg" id="pAct"><button data-v="1" class="' + (p.active ? 'on' : '') + '">✅ Активний</button><button data-v="0" class="' + (!p.active ? 'on' : '') + '">🔒 Вимкнути</button></div>') +
+      '<button class="save" id="pSave">' + (p.isNew ? 'Додати' : 'Зберегти') + '</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="pCancel">Скасувати</button>' +
+      '<div class="msg" id="pMsg">' + (p.isNew ? 'Після додавання людина пише боту /start. Чужі дані вона побачить лише після «Видати доступ».' : '') + '</div></div>';
+  }
+  function seg(id, cb) { var el = $(id); if (!el) return; el.querySelectorAll('button').forEach(function (b) { b.onclick = function () { el.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); haptic(); cb(b.dataset.v); }; }); }
+  function bindForms() {
+    if (A.form) {
+      $('#gWho').onchange = function () { A.form.who = this.value; };
+      $('#gTgt').onchange = function () { A.form.target = this.value; };
+      seg('#gLvl', function (v) { A.form.level = v; });
+      seg('#gTerm', function (v) { A.form.term = v; });
+      $('#gCancel').onclick = function () { A.form = null; drawAdmin(); };
+      $('#gSave').onclick = function () {
+        var f = A.form, b = this; b.disabled = true; $('#gMsg').className = 'msg'; $('#gMsg').textContent = 'Видаю…';
+        api('grant', { who: f.who, target: f.target, level: f.level, term: f.term }).then(function () { haptic('medium'); A.form = null; renderAdmin(); })
+          .catch(function (e) { b.disabled = false; $('#gMsg').className = 'msg err'; $('#gMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
+      };
+    }
+    if (A.person) {
+      seg('#pAct', function (v) { A.person.active = v === '1'; });
+      $('#pCancel').onclick = function () { A.person = null; drawAdmin(); };
+      $('#pSave').onclick = function () {
+        var p = A.person, b = this;
+        var body = { username: p.isNew ? $('#pUser').value : p.username, name: $('#pName').value, role: $('#pRole').value, office: $('#pOffice').value, active: p.active !== false };
+        b.disabled = true; $('#pMsg').className = 'msg'; $('#pMsg').textContent = 'Зберігаю…';
+        api('person', body).then(function () { haptic('medium'); A.person = null; renderAdmin(); })
+          .catch(function (e) { b.disabled = false; $('#pMsg').className = 'msg err'; $('#pMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
+      };
+    }
+  }
+  function revoke(id) {
+    var go = function () { api('revoke', { id: id }).then(function () { haptic('medium'); renderAdmin(); }).catch(function (e) { alert(errText(e)); }); };
+    if (tg && tg.showConfirm) tg.showConfirm('Забрати цей доступ зараз?', function (ok) { if (ok) go(); }); else if (confirm('Забрати цей доступ зараз?')) go();
+  }
+
+  document.querySelectorAll('.tab').forEach(function (tb) {
+    tb.onclick = function () {
+      document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === tb); });
+      S.tab = tb.dataset.tab; haptic(); if (S.data || S.tab === 'admin') render();
+    };
+  });
+
+  // ── демо-дані (?demo=1) для перегляду без Telegram ──
+  function demo(action, p) {
+    var now = '2026-11-03T15:40';
+    var B = [
+      { id: 'b1', name: 'Кавʼярня Арома', status: 'yellow', lpr_name: 'Сергій', lpr_phone: '380671234567', next_dt: '2026-11-03T16:30', next_kind: 'callback', last_comment: 'Думає над 3д туром, треба порадитись з дружиною. Буває після 16.', updated_at: '2026-11-02T12:00' },
+      { id: 'b2', name: 'СТО Мотор', status: 'blue', lpr_name: 'Ігор', lpr_phone: '380501112233', next_dt: '2026-11-03T17:00', next_kind: 'meeting', last_comment: 'Адмін Оля: власник буває з 17, домовились про зустріч', updated_at: '2026-11-02T15:00' },
+      { id: 'b3', name: 'Квіти Лілія', status: 'yellow', lpr_name: 'Ірина', lpr_phone: '380631234567', next_dt: '2026-11-02T11:00', next_kind: 'callback', overdue: true, last_comment: 'Просила набрати в понеділок після обіду', updated_at: '2026-10-31T11:00' },
+      { id: 'b4', name: 'Барбершоп Борода', status: 'blue', lpr_name: 'Петро', lpr_phone: '380502222222', next_dt: '2026-11-04T12:00', next_kind: 'meeting', last_comment: '', updated_at: '2026-11-03T10:00' },
+      { id: 'b5', name: 'Аптека Здоровʼя', status: 'red', red_kind: 'refusal', lpr_name: 'Олена', lpr_phone: '', last_comment: 'Мережа, рішення приймає головний офіс у Києві, локально нічого не вирішують', updated_at: '2026-11-03T11:30' },
+      { id: 'b6', name: 'Окоіл', status: 'green', lpr_name: 'Євген', lpr_phone: '380503380490', last_comment: 'Відновлення профілю, 8300 грн, оплата 06.11', updated_at: '2026-11-03T14:50' }
+    ];
+    var ADM = /admin=1/.test(location.search);
+    if (action === 'me') return ADM ? { me: { username: 'owner', name: 'Микола', role: 'owner', admin: true }, agents: [{ username: 'owner', name: 'Микола', level: 'edit' }, { username: 'matei', name: 'Матей', level: 'edit' }, { username: 'olga', name: 'Ольга', level: 'edit' }], now: now }
+      : { me: { username: 'matei', name: 'Матей', role: 'agent' }, agents: [{ username: 'matei', name: 'Матей', level: 'edit' }], now: now };
+    if (action === 'admin') return { now: now, roles: [{ id: 'agent', name: 'агент' }, { id: 'instructor', name: 'інструктор' }, { id: 'manager', name: 'менеджер' }, { id: 'viewer', name: 'перегляд' }, { id: 'owner', name: 'власник' }],
+      people: [{ username: 'owner', name: 'Микола', role: 'owner', active: true, linked: true }, { username: 'matei', name: 'Матей', role: 'agent', office: 'CV', active: true, linked: true },
+        { username: 'olga', name: 'Ольга (стажер)', role: 'agent', office: 'CV', active: true, linked: false }, { username: 'ivan_instr', name: 'Іван', role: 'instructor', office: 'CV', active: true, linked: true },
+        { username: 'shakhmatov', name: 'Шахматов', role: 'manager', office: 'CV', active: true, linked: true }],
+      grants: [{ id: 'g1', who_name: 'Іван', target_name: 'Ольга (стажер)', level: 'view', until: '', active: true },
+        { id: 'g2', who_name: 'Шахматов', target_name: 'Матей', level: 'view', until: '2026-11-03T17:40', active: true },
+        { id: 'g3', who_name: 'Шахматов', target_name: 'Ольга (стажер)', level: 'edit', until: '2026-11-01T18:00', active: false }] };
+    if (action === 'list') return { now: now, today: { doors: 12, lpr: 5, quality: 3, repeats: 2 }, week: { lpr: 21, doors: 64 },
+      norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 }, open: { bizName: 'Піцерія Наполі', start: '2026-11-03T15:32' }, businesses: B };
+    if (action === 'biz') { var b = B.filter(function (x) { return x.id === p.id; })[0];
+      return { business: b, editable: true, events: [
+        { date: '2026-11-02', start: '2026-11-02T11:40', minutes: 22, kind: 'visit', who: 'L', status_after: b.status, door: true, comment: b.last_comment, notes: 'адмін Оля 0671112233; власник буває після 16' },
+        { date: '2026-10-30', start: '2026-10-30T15:10', minutes: 4, kind: 'visit', who: 'A', status_after: 'blue', door: true, comment: '', notes: 'ЛПР не було, адмін дала номер' }] }; }
+    if (action === 'update') return { ok: true, changed: ['нотатка'], business: B[0] };
+  }
+
+  if (GAS && !INIT && !KEY && google.script.url) {
+    google.script.url.getLocation(function (loc) {
+      INIT = initFromHash(loc && loc.hash);
+      if (loc && loc.parameter && loc.parameter.k) KEY = loc.parameter.k;
+      boot();
+    });
+  } else boot();
+})();
+</script>
+</body>
+</html>
