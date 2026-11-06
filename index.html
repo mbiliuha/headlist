@@ -195,7 +195,7 @@
   }
   function load() {
     $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
-    api('list', { agent: S.agent }).then(function (data) { S.data = data; render(); })
+    api('list', { agent: S.agent }).then(function (data) { S.data = data; BIZ = {}; render(); prefetch(data.businesses.filter(function (b) { return isOpenSt(b.status) || b.next_kind === 'payment'; })); })
       .catch(function (e) { $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
   }
 
@@ -284,12 +284,30 @@
 
   // ── картка бізнесу ──
   var KIND = { visit: '🚪', call: '📞', message: '💬', note: '📝', status: '🔄', reminder: '🔔' };
-  function openBiz(id) {
+  // Картка відкривається миттєво з того, що вже є в списку (або з кешу), історія догружається у фоні.
+  var BIZ = {};
+  function openBiz(id, keepScroll) {
     haptic();
-    var el = $('#detail');
-    el.innerHTML = '<div class="spin">Завантаження…</div>'; el.classList.add('show'); el.scrollTop = 0;
+    var el = $('#detail'), opened = el.classList.contains('show') && el.dataset.id === id;
+    el.dataset.id = id; el.classList.add('show'); if (!keepScroll && !opened) el.scrollTop = 0;
     if (tg && tg.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(closeBiz); }
-    api('biz', { id: id }).then(function (r) { renderBiz(r); }).catch(function (e) { el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+    var cached = BIZ[id], fromList = S.data && S.data.businesses.filter(function (x) { return x.id === id; })[0];
+    if (cached) renderBiz(cached);
+    else if (fromList) renderBiz({ business: fromList, events: null, editable: S.data.editable });
+    else el.innerHTML = '<div class="spin">Завантаження…</div>';
+    api('biz', { id: id }).then(function (r) {
+      BIZ[id] = r;
+      if (el.dataset.id !== id || !el.classList.contains('show')) return;
+      var typing = ['fName', 'fLpr', 'fPhone', 'fNote', 'stWhy', 'stWhen', 'stFar'].some(function (k) { var x = $('#' + k); return x && (x === document.activeElement || (k === 'fNote' || k === 'stWhy') && x.value); });
+      if (typing && $('#hist')) $('#hist').innerHTML = histHtml(r.events);   // не збиваємо те, що людина вже пише
+      else renderBiz(r);
+    }).catch(function (e) { if (!cached && !fromList) el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  }
+  function histHtml(evs) { return evs === null ? '<div class="spin">Завантаження історії…</div>' : evs.length ? evs.map(evRow).join('') : '<div class="empty">Порожньо</div>'; }
+  // фоново підвантажити картки, щоб відкривались миттєво
+  function prefetch(list) {
+    var ids = list.filter(function (b) { return !BIZ[b.id]; }).slice(0, 8).map(function (b) { return b.id; });
+    (function next() { var id = ids.shift(); if (!id) return; api('biz', { id: id }).then(function (r) { BIZ[id] = r; }).catch(function () {}).then(next); })();
   }
   function closeBiz() {
     $('#detail').classList.remove('show');
@@ -318,7 +336,7 @@
         '<div class="field" id="stWhenF"><label>Коли</label><input id="stWhen" placeholder="напр. завтра 11:00 або пт 15:30"></div>' +
         '<div class="field" id="stFarF" style="display:none"><label>Причина</label><input id="stFar" placeholder="чому не раніше ніж за 2 робочі дні"></div>' +
         '</div></div><button class="save" id="stBtn" style="display:none">Змінити статус</button><div class="msg" id="stMsg"></div></div>');
-    h += '<div class="sec"><h2>Історія</h2><div class="card">' + (r.events.length ? r.events.map(evRow).join('') : '<div class="empty">Порожньо</div>') + '</div></div><div style="height:24px"></div>';
+    h += '<div class="sec"><h2>Історія</h2><div class="card" id="hist">' + histHtml(r.events) + '</div></div><div style="height:24px"></div>';
     el.innerHTML = h;
     $('#bk').onclick = closeBiz;
     if (ed) $('#saveBtn').onclick = function () { save(b); };
@@ -364,7 +382,7 @@
       haptic('medium');
       var i = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
       if (i >= 0 && r.business) S.data.businesses[i] = r.business;
-      openBiz(b.id); render();
+      delete BIZ[b.id]; openBiz(b.id); render();
     }).catch(function (e) {
       btn.disabled = false; msg.className = 'msg err';
       var m = String(e && e.message || '');
@@ -392,10 +410,10 @@
             haptic('medium');
             var j = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
             if (j >= 0 && r2.business) S.data.businesses[j] = r2.business;
-            openBiz(b.id); render();
+            delete BIZ[b.id]; openBiz(b.id); render();
           }).catch(function (e) { msg.className = 'msg err'; msg.textContent = String(e && e.message || '').length > 15 ? e.message : errText(e); });
         };
-      } else if (p.note) openBiz(b.id);
+      } else if (p.note) { delete BIZ[b.id]; openBiz(b.id, true); }
     }).catch(function (e) {
       btn.disabled = false; msg.className = 'msg err';
       msg.textContent = /Телефон/.test(e.message) ? e.message : errText(e);
