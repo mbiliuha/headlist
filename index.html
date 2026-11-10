@@ -100,6 +100,20 @@
   .seg button.on { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
   .form .save { width: 100%; margin: 10px 0 0; }
   .muted { opacity: .55; }
+  .daynav { display: flex; align-items: center; gap: 8px; padding: 10px 12px 0; }
+  .daynav b { flex: 1; text-align: center; font-size: 16px; }
+  .daynav button { border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 12px; font: inherit; font-size: 15px; }
+  .daynav button:disabled { opacity: .35; }
+  .dsum { margin: 8px 12px 0; font-size: 14px; color: var(--hint); }
+  .drow { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--sep); cursor: pointer; }
+  .drow:active { background: var(--bg2); }
+  .drow .tm { flex: none; width: 52px; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--hint); line-height: 1.3; }
+  .drow .tm b { display: block; color: var(--text); font-size: 15px; }
+  .drow .bd { flex: 1; min-width: 0; }
+  .drow .nm { font-weight: 600; }
+  .drow .mt { font-size: 13px; color: var(--hint); margin-top: 2px; }
+  .drow .cm { font-size: 14px; margin-top: 3px; }
+  .gap { padding: 6px 16px 6px 78px; font-size: 13px; color: var(--hint); background: var(--bg2); border-bottom: 1px solid var(--sep); }
   #offbar { display: none; margin: 8px 12px 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; background: color-mix(in srgb, #ff9500 16%, var(--bg)); color: var(--text); }
   #offbar.show { display: block; }
   #offbar button { margin-left: 8px; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 8px; padding: 2px 8px; font: inherit; font-size: 13px; }
@@ -110,7 +124,7 @@
   <header>
     <div class="row"><div class="who" id="who">Хед-лист</div><select id="agentSel" style="display:none"></select></div>
     <div class="stats" id="stats"></div>
-    <div class="tabs" id="tabs"><button class="tab on" data-tab="tasks">Наработки</button><button class="tab" data-tab="all">Усі бізнеси</button><button class="tab" data-tab="admin" id="tabAdmin" style="display:none">Доступи</button></div>
+    <div class="tabs" id="tabs"><button class="tab on" data-tab="tasks">Наработки</button><button class="tab" data-tab="day">День</button><button class="tab" data-tab="all">Усі бізнеси</button><button class="tab" data-tab="admin" id="tabAdmin" style="display:none">Доступи</button></div>
   </header>
   <div id="offbar"></div>
   <div id="main"><div class="spin">Завантаження…</div></div>
@@ -251,7 +265,7 @@
         sel.innerHTML = me.agents.filter(function (a) { return a.username !== me.me.username || me.agents.length === 1; })
           .map(function (a) { return '<option value="' + esc(a.username) + '">' + esc(a.name) + (a.level === 'edit' ? ' ✏️' : ' 👁') + '</option>'; }).join('');
         sel.value = S.agent; sel.style.display = '';
-        sel.onchange = function () { S.agent = sel.value; load(); };
+        sel.onchange = function () { S.agent = sel.value; S.day = ''; load(); };
       }
       if (me.me.admin) $('#tabAdmin').style.display = '';
       if (!me.agents.length) { S.tab = 'admin'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === 'admin'); }); }
@@ -319,6 +333,7 @@
     stats();
     var x = S.data, html = '';
     if (x.open) html += '<div class="banner">📌 Зараз у візиті з ' + t(x.open.start) + (x.open.bizName ? ': <b>' + esc(x.open.bizName) + '</b>' : '') + '</div>';
+    if (S.tab === 'day') { $('#main').innerHTML = html + '<div id="dayBox"><div class="spin">Завантаження…</div></div>'; return loadDay(); }
     if (S.tab === 'tasks') html += tasksView(); else html += allView();
     $('#main').innerHTML = html;
     var inp = $('#q');
@@ -355,6 +370,72 @@
       return (b.name + ' ' + b.lpr_name).toLowerCase().indexOf(q) >= 0 || (qd.length >= 3 && String(b.lpr_phone).indexOf(qd) >= 0);
     });
     return l.length ? l.map(function (b) { return row(b, false); }).join('') : '<div class="empty">Нічого не знайдено</div>';
+  }
+
+  // ── полотно дня: що агент робив за день, по порядку часу ──
+  var DAYC = {};
+  function loadDay() {
+    var x = S.data, date = S.day || d(x.now), key = S.agent + ':' + date;
+    if (DAYC[key]) drawDay(DAYC[key]);
+    api('day', { agent: S.agent, date: date }).then(function (r) {
+      DAYC[key] = r; if (date === d(x.now)) lsSet('hl_day_' + S.agent, r);
+      if (S.tab === 'day' && (S.day || d(S.data.now)) === date) drawDay(r);
+    }).catch(function (e) {
+      var c = e && e.net && lsGet('hl_day_' + S.agent);
+      if (c && c.date === date) { drawDay(c); return; }
+      if (!DAYC[key] && $('#dayBox')) $('#dayBox').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>';
+    });
+  }
+  function drawDay(r) {
+    var box = $('#dayBox'); if (!box) return;
+    var date = r.date, isToday = date === r.today, c = r.counters, n = r.norms;
+    var h = '<div class="daynav"><button id="dPrev">‹</button><b>' + (isToday ? 'Сьогодні, ' : '') + wd(date) + ' ' + dm(date) + '</b>' +
+      '<button id="dNext"' + (isToday ? ' disabled' : '') + '>›</button>' + (isToday ? '' : '<button id="dToday">Сьогодні</button>') + '</div>';
+    var visits = r.rows.filter(function (e) { return e.kind === 'visit'; });
+    var last = r.rows.length ? r.rows[r.rows.length - 1] : null;
+    h += '<div class="dsum">🚪 дверей <b>' + c.doors + '</b>/' + n.doors + ' · 🤝 ЛПР <b>' + c.lpr + '</b>/' + n.lpr + ' · ⏱ ≥' + n.qualityMin + ' хв <b>' + c.quality + '</b>' +
+      (c.repeats || c.returns ? ' · повтори ' + (c.repeats + c.returns) : '') +
+      (visits.length ? '<br>перший візит ' + t(visits[0].start) + ' · останній запис ' + t(last.end || last.start) : '') + '</div>';
+    if (!r.rows.length) h += '<div class="empty">' + (isToday ? 'Сьогодні ще нічого не записано' : 'Цього дня записів немає') + '</div>';
+    else {
+      h += '<div class="group"><div class="list">';
+      var prevEnd = '';
+      r.rows.forEach(function (e) {
+        var st = e.start, gap = prevEnd && st ? mins(prevEnd, st) : 0;
+        if (e.kind === 'visit' && gap >= 30) h += '<div class="gap">⏸ ' + dur(gap) + ' без записів</div>';
+        h += dayRow(e);
+        if (e.kind === 'visit') prevEnd = e.end || e.start;
+      });
+      h += '</div></div>';
+    }
+    box.innerHTML = h + '<div style="height:24px"></div>';
+    function go(k) { S.day = k; haptic(); loadDay(); }
+    $('#dPrev').onclick = function () { go(addDays(date, -1)); };
+    if (!isToday) { $('#dNext').onclick = function () { var nx = addDays(date, 1); go(nx >= r.today ? '' : nx); }; $('#dToday').onclick = function () { go(''); }; }
+    box.querySelectorAll('.drow').forEach(function (el) { el.onclick = function () { if (el.dataset.id) openBiz(el.dataset.id); }; });
+  }
+  function mins(a, b) { var x = Date.parse(a + ':00Z'), y = Date.parse(b + ':00Z'); return isNaN(x) || isNaN(y) ? 0 : Math.round((y - x) / 60000); }
+  function dur(m) { return m >= 60 ? Math.floor(m / 60) + ' год ' + (m % 60 ? m % 60 + ' хв' : '') : m + ' хв'; }
+  function dayRow(e) {
+    var tm = '<b>' + t(e.start) + '</b>' + (e.kind === 'visit' && e.end && e.end !== e.start ? t(e.end) : '');
+    var meta = [], ico = KIND[e.kind] || '•';
+    if (e.kind === 'visit') {
+      meta.push(e.door ? '🚪 двері' : (e.status_before === 'yellow' ? '🔁 повтор' : '↩️ повернення'));
+      meta.push(e.minutes + ' хв');
+      meta.push(e.who === 'L' ? '🤝 ЛПР' + (e.lpr_name ? ' ' + e.lpr_name : '') : e.who === 'A' ? 'адмін' : '');
+    } else if (e.kind === 'call') { meta.push('📞 дзвінок'); if (e.result === 'nbt') meta.push('НБТ'); }
+    else if (e.kind === 'status') meta.push(e.status_before === e.status_after ? '🗓 перенесено' : '🔄 статус');
+    else if (e.kind === 'note') meta.push('📝 нотатка');
+    else if (e.kind === 'payment') meta.push('💰 оплата');
+    else meta.push(ico + ' ' + e.kind);
+    var sb = e.status_before && e.status_before !== e.status_after ? (ST[e.status_before] || e.status_before) + ' → ' : '';
+    if (e.status_after) meta.push(sb + (ST[e.status_after] || e.status_after));
+    if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') meta.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt));
+    if (e.by) meta.push('від @' + e.by);
+    var txt = e.comment || e.notes;
+    return '<div class="drow" data-id="' + esc(e.business_id) + '"><div class="tm">' + tm + '</div><div class="bd">' +
+      '<div class="nm"><span class="dot s-' + (e.status_after || 'none') + '" style="display:inline-block;margin:0 6px 1px 0;vertical-align:middle"></span>' + esc(e.name || '—') + '</div>' +
+      '<div class="mt">' + meta.filter(Boolean).map(esc).join(' · ') + '</div>' + (txt ? '<div class="cm">' + esc(txt) + '</div>' : '') + '</div></div>';
   }
 
   // ── картка бізнесу ──
@@ -625,6 +706,12 @@
         { id: 'g3', who_name: 'Шахматов', target_name: 'Ольга (стажер)', level: 'edit', until: '2026-11-01T18:00', active: false }] };
     if (action === 'list') return { now: now, today: { doors: 12, lpr: 5, quality: 3, repeats: 2 }, week: { lpr: 21, doors: 64 },
       norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 }, open: { bizName: 'Піцерія Наполі', start: '2026-11-03T15:32' }, businesses: B };
+    if (action === 'day') return { date: p.date || '2026-11-03', today: '2026-11-03', counters: { doors: 3, lpr: 2, quality: 1, repeats: 1, returns: 0 }, norms: { doors: 20, lpr: 10, qualityMin: 20 }, open: null,
+      rows: p.date && p.date !== '2026-11-03' ? [] : [
+        { business_id: 'b1', name: 'Кавʼярня Арома', kind: 'visit', start: '2026-11-03T10:05', end: '2026-11-03T10:30', minutes: 25, who: 'L', door: true, lpr_name: 'Сергій', status_before: '', status_after: 'yellow', next_dt: '2026-11-03T16:30', comment: 'Думає над 3д туром, порадиться з дружиною' },
+        { business_id: 'b2', name: 'СТО Мотор', kind: 'visit', start: '2026-11-03T10:40', end: '2026-11-03T10:48', minutes: 8, who: 'A', door: true, status_before: '', status_after: 'blue', next_dt: '2026-11-03T17:00', comment: 'Адмін Оля: власник з 17' },
+        { business_id: 'b1', name: 'Кавʼярня Арома', kind: 'call', start: '2026-11-03T12:15', minutes: 0, status_before: 'yellow', status_after: 'yellow', comment: 'Не взяв' },
+        { business_id: 'b3', name: 'Квіти Лілія', kind: 'visit', start: '2026-11-03T13:30', end: '2026-11-03T13:52', minutes: 22, who: 'L', door: true, lpr_name: 'Ірина', status_before: '', status_after: 'red', comment: 'Не цікаво, вже є сайт' }] };
     if (action === 'biz') { var b = B.filter(function (x) { return x.id === p.id; })[0];
       return { business: b, editable: true, events: [
         { date: '2026-11-02', start: '2026-11-02T11:40', minutes: 22, kind: 'visit', who: 'L', status_after: b.status, door: true, comment: b.last_comment, notes: 'адмін Оля 0671112233; власник буває після 16' },
