@@ -323,7 +323,7 @@
       (b.next_kind === 'meeting' ? 'зустріч ' : b.next_kind === 'payment' ? '💰 дзвінок щодо оплати ' : b.status === 'yellow' ? 'передзвон «думає» ' : 'вийти на ЛПР ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) + (b.deferred ? ' · відкладено: ' + esc(b.deferred) : '') + '</div>';
     var phone = b.lpr_phone ? '<a class="callbtn" href="tel:+' + esc(b.lpr_phone) + '" onclick="return callNum(event,\'' + esc(b.id) + '\',\'' + esc(b.lpr_phone) + '\')">📞 Дзвонити</a>' : '';
     var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>' + esc(b.name) + '</h1>' +
-      '<span class="pill"><span class="dot s-' + (b.status || 'none') + '" style="margin:0"></span>' + ST[b.status || ''] + (b.status === 'red' ? (b.red_kind === 'exhausted' ? ' · пробити неможливо' : b.red_kind === 'meeting' ? ' · відмова від зустрічі (тел.)' : ' · відмова ЛПР') : '') + '</span>' + next + '</div>';
+      '<span class="pill"><span class="dot s-' + (b.status || 'none') + '" style="margin:0"></span>' + ST[b.status || ''] + (b.status === 'red' ? (b.red_kind === 'exhausted' ? ' · пробити неможливо' : b.red_kind === 'closed' ? ' · бізнес закрився' : b.red_kind === 'meeting' ? ' · відмова від зустрічі (тел.)' : ' · відмова ЛПР') : '') + '</span>' + next + '</div>';
     h += '<div class="sec"><h2>Контакт</h2><div class="card">' +
       '<div class="field"><label>Назва</label><input id="fName" value="' + esc(b.name) + '"' + (ed ? '' : ' disabled') + '></div>' +
       '<div class="field"><label>ЛПР</label><input id="fLpr" value="' + esc(b.lpr_name) + '" placeholder="імʼя"' + (ed ? '' : ' disabled') + '></div>' +
