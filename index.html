@@ -461,7 +461,7 @@
   var ROLE = { agent: 'агент', instructor: 'інструктор', manager: 'менеджер', viewer: 'перегляд', owner: 'власник' };
   function personRow(p) {
     return '<div class="item' + (p.active ? '' : ' muted') + '" data-person="' + esc(p.username) + '"><div class="body"><div class="name">' + esc(p.name || p.username) + '</div>' +
-      '<div class="sub">@' + esc(p.username) + ' · ' + esc(ROLE[p.role] || p.role) + (p.office ? ' · ' + esc(p.office) : '') + (A.data && A.data.owner && p.lead_name ? ' · 👤 ' + esc(p.lead_name) : '') + ' · ' +
+      '<div class="sub">@' + esc(p.username) + ' · ' + esc(ROLE[p.role] || p.role) + (p.office ? ' · ' + esc(p.office) : '') + (A.data && p.lead_name && (A.data.owner || p.lead !== A.data.me) ? ' · 👤 ' + esc(p.lead_name) : '') + ' · ' +
       (p.active ? (p.linked ? '✅ у боті' : '⏳ ще не натиснув /start') : '🔒 вимкнено') + '</div></div></div>';
   }
   function opt(v, l, sel) { return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(l) + '</option>'; }
