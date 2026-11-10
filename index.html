@@ -444,12 +444,12 @@
       (act.length ? act.map(grantRow).join('') : '<div class="empty">Ніхто нічого не бачить, крім своїх даних</div>') + '</div></div>';
     if (old.length) h += '<div class="group"><div class="gtitle"><span>Закінчились (14 днів)</span><span>' + old.length + '</span></div><div class="list">' + old.map(grantRow).join('') + '</div></div>';
     h += A.person ? personForm(r) : '<button class="addbtn" id="pAdd">＋ Додати людину</button>';
-    h += '<div class="group"><div class="gtitle"><span>Люди</span><span>' + r.people.length + '</span></div><div class="list">' + r.people.map(personRow).join('') + '</div></div><div style="height:24px"></div>';
+    h += '<div class="group"><div class="gtitle"><span>' + (r.owner ? 'Люди' : 'Мої люди') + '</span><span>' + r.people.length + '</span></div><div class="list">' + r.people.map(personRow).join('') + '</div></div><div style="height:24px"></div>';
     $('#main').innerHTML = h;
     var ga = $('#gAdd'); if (ga) ga.onclick = function () { A.form = { level: 'view', term: '1h' }; drawAdmin(); };
-    var pa = $('#pAdd'); if (pa) pa.onclick = function () { A.person = { role: 'viewer', active: true, isNew: true }; drawAdmin(); };
+    var pa = $('#pAdd'); if (pa) pa.onclick = function () { A.person = { role: r.owner ? 'viewer' : 'agent', active: true, isNew: true, lead: '' }; drawAdmin(); };
     document.querySelectorAll('[data-revoke]').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); revoke(b.dataset.revoke); }; });
-    document.querySelectorAll('[data-person]').forEach(function (el) { el.onclick = function () { var p = ppl[el.dataset.person]; A.person = { username: p.username, name: p.name, role: p.role, office: p.office, active: p.active }; drawAdmin(); window.scrollTo(0, 0); }; });
+    document.querySelectorAll('[data-person]').forEach(function (el) { el.onclick = function () { var p = ppl[el.dataset.person]; A.person = { username: p.username, name: p.name, role: p.role, office: p.office, active: p.active, lead: p.lead || '' }; drawAdmin(); window.scrollTo(0, 0); }; });
     bindForms();
   }
   function grantRow(g) {
@@ -461,7 +461,7 @@
   var ROLE = { agent: 'агент', instructor: 'інструктор', manager: 'менеджер', viewer: 'перегляд', owner: 'власник' };
   function personRow(p) {
     return '<div class="item' + (p.active ? '' : ' muted') + '" data-person="' + esc(p.username) + '"><div class="body"><div class="name">' + esc(p.name || p.username) + '</div>' +
-      '<div class="sub">@' + esc(p.username) + ' · ' + esc(ROLE[p.role] || p.role) + (p.office ? ' · ' + esc(p.office) : '') + ' · ' +
+      '<div class="sub">@' + esc(p.username) + ' · ' + esc(ROLE[p.role] || p.role) + (p.office ? ' · ' + esc(p.office) : '') + (A.data && A.data.owner && p.lead_name ? ' · 👤 ' + esc(p.lead_name) : '') + ' · ' +
       (p.active ? (p.linked ? '✅ у боті' : '⏳ ще не натиснув /start') : '🔒 вимкнено') + '</div></div></div>';
   }
   function opt(v, l, sel) { return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(l) + '</option>'; }
@@ -470,11 +470,11 @@
     var whoOpts = r.people.filter(function (p) { return p.active && p.role !== 'owner'; });
     var tgtOpts = r.people.filter(function (p) { return p.active && p.role === 'agent'; });
     if (!f.who && whoOpts[0]) f.who = whoOpts[0].username;
-    if (!f.target) f.target = tgtOpts[0] ? tgtOpts[0].username : '*';
+    if (!f.target) f.target = tgtOpts[0] ? tgtOpts[0].username : (r.owner ? '*' : '');
     var offices = {}; tgtOpts.forEach(function (p) { if (p.office) offices[p.office] = 1; });
     return '<div class="form"><div class="field"><label>Кому</label><select id="gWho">' + whoOpts.map(function (p) { return opt(p.username, (p.name || p.username) + ' (' + (ROLE[p.role] || p.role) + ')', f.who); }).join('') + '</select></div>' +
       '<div class="field"><label>Чиї дані</label><select id="gTgt">' + tgtOpts.map(function (p) { return opt(p.username, p.name || p.username, f.target); }).join('') +
-      Object.keys(offices).map(function (o) { return opt('office:' + o, 'Офіс ' + o + ' (усі агенти)', f.target); }).join('') + opt('*', 'Усі агенти', f.target) + '</select></div>' +
+      (r.owner ? Object.keys(offices).map(function (o) { return opt('office:' + o, 'Офіс ' + o + ' (усі агенти)', f.target); }).join('') + opt('*', 'Усі агенти', f.target) : '') + '</select></div>' +
       '<div class="seg" id="gLvl"><button data-v="view" class="' + (f.level === 'view' ? 'on' : '') + '">👁 Перегляд</button><button data-v="edit" class="' + (f.level === 'edit' ? 'on' : '') + '">✏️ Редагування</button></div>' +
       '<div class="seg" id="gTerm">' + TERMS.map(function (x) { return '<button data-v="' + x[0] + '" class="' + (f.term === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</div>' +
       '<button class="save" id="gSave">Видати</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="gCancel">Скасувати</button><div class="msg" id="gMsg">Редагування = правка ЛПР, телефону, нотаток і статусу (з поясненням). Договір — лише через бота.</div></div>';
@@ -485,9 +485,11 @@
       '<div class="field"><label>Імʼя</label><input id="pName" value="' + esc(p.name || '') + '"></div>' +
       '<div class="field"><label>Роль</label><select id="pRole">' + r.roles.map(function (x) { return opt(x.id, x.name, p.role); }).join('') + '</select></div>' +
       '<div class="field"><label>Офіс</label><input id="pOffice" placeholder="необовʼязково" value="' + esc(p.office || '') + '"></div>' +
+      (r.owner ? '<div class="field"><label>Керівник (менеджер)</label><select id="pLead">' + opt('', '— без керівника —', p.lead || '') +
+        (r.managers || []).map(function (m) { return opt(m.username, m.name, p.lead || ''); }).join('') + '</select></div>' : '') +
       (p.isNew ? '' : '<div class="seg" id="pAct"><button data-v="1" class="' + (p.active ? 'on' : '') + '">✅ Активний</button><button data-v="0" class="' + (!p.active ? 'on' : '') + '">🔒 Вимкнути</button></div>') +
       '<button class="save" id="pSave">' + (p.isNew ? 'Додати' : 'Зберегти') + '</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="pCancel">Скасувати</button>' +
-      '<div class="msg" id="pMsg">' + (p.isNew ? 'Після додавання людина пише боту /start. Чужі дані вона побачить лише після «Видати доступ».' : '') + '</div></div>';
+      '<div class="msg" id="pMsg">' + (p.isNew ? (r.owner ? 'Після додавання людина пише боту /start. Менеджер-керівник бачить своїх агентів одразу; решті — через «Видати доступ».' : 'Людина закріпиться за тобою: її хед-лист бачиш лише ти і власник. Після додавання вона пише боту /start.') : '') + '</div></div>';
   }
   function seg(id, cb) { var el = $(id); if (!el) return; el.querySelectorAll('button').forEach(function (b) { b.onclick = function () { el.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); haptic(); cb(b.dataset.v); }; }); }
   function bindForms() {
@@ -499,7 +501,7 @@
       $('#gCancel').onclick = function () { A.form = null; drawAdmin(); };
       $('#gSave').onclick = function () {
         var f = A.form, b = this; b.disabled = true; $('#gMsg').className = 'msg'; $('#gMsg').textContent = 'Видаю…';
-        api('grant', { who: f.who, target: f.target, level: f.level, term: f.term }).then(function () { haptic('medium'); A.form = null; renderAdmin(); })
+        api('grant', { who: f.who, target: f.target, level: f.level, term: f.term }).then(function (r) { if (r && r.ok === false) throw new Error(r.error); haptic('medium'); A.form = null; renderAdmin(); })
           .catch(function (e) { b.disabled = false; $('#gMsg').className = 'msg err'; $('#gMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
       };
     }
@@ -509,14 +511,15 @@
       $('#pSave').onclick = function () {
         var p = A.person, b = this;
         var body = { username: p.isNew ? $('#pUser').value : p.username, name: $('#pName').value, role: $('#pRole').value, office: $('#pOffice').value, active: p.active !== false };
+        if ($('#pLead')) body.lead = $('#pLead').value;
         b.disabled = true; $('#pMsg').className = 'msg'; $('#pMsg').textContent = 'Зберігаю…';
-        api('person', body).then(function () { haptic('medium'); A.person = null; renderAdmin(); })
+        api('person', body).then(function (r) { if (r && r.ok === false) throw new Error(r.error); haptic('medium'); A.person = null; renderAdmin(); })
           .catch(function (e) { b.disabled = false; $('#pMsg').className = 'msg err'; $('#pMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
       };
     }
   }
   function revoke(id) {
-    var go = function () { api('revoke', { id: id }).then(function () { haptic('medium'); renderAdmin(); }).catch(function (e) { alert(errText(e)); }); };
+    var go = function () { api('revoke', { id: id }).then(function (r) { if (r && r.ok === false) throw new Error(r.error); haptic('medium'); renderAdmin(); }).catch(function (e) { var m = e.message && e.message.length > 12 ? e.message : errText(e); if (tg && tg.showAlert) tg.showAlert(m); else alert(m); }); };
     if (tg && tg.showConfirm) tg.showConfirm('Забрати цей доступ зараз?', function (ok) { if (ok) go(); }); else if (confirm('Забрати цей доступ зараз?')) go();
   }
 
