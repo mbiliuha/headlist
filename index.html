@@ -400,7 +400,7 @@
     else {
       h += '<div class="group"><div class="list">';
       var prevEnd = '';
-      r.rows.forEach(function (e) {
+      dedupEv(r.rows).forEach(function (e) {
         var st = e.start, gap = prevEnd && st ? mins(prevEnd, st) : 0;
         if (e.kind === 'visit' && gap >= 30) h += '<div class="gap">⏸ ' + dur(gap) + ' без записів</div>';
         h += dayRow(e);
@@ -459,7 +459,15 @@
       else renderBiz(r);
     }).catch(function (e) { if (!cached && !fromList) el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; else if (e && e.net && $('#hist') && !cached) $('#hist').innerHTML = '<div class="empty">Історія недоступна без звʼязку</div>'; });
   }
-  function histHtml(evs) { return evs === null ? '<div class="spin">Завантаження історії…</div>' : evs.length ? evs.map(evRow).join('') : '<div class="empty">Порожньо</div>'; }
+  function histHtml(evs) { return evs === null ? '<div class="spin">Завантаження історії…</div>' : evs.length ? dedupEv(evs).map(evRow).join('') : '<div class="empty">Порожньо</div>'; }
+  // нотатка + «перенести?» → два записи з тим самим текстом за хвилину; показуємо один (перенесення, в ньому вже є текст)
+  function dedupEv(evs) {
+    var tm = function (e) { return Date.parse(String(e.start || e.ts || '').slice(0, 16) + ':00Z') || 0; };
+    return evs.filter(function (e) {
+      if (e.kind !== 'note' || !e.comment) return true;
+      return !evs.some(function (o) { return o !== e && o.kind === 'status' && o.business_id === e.business_id && String(o.comment || '').trim() === String(e.comment).trim() && Math.abs(tm(o) - tm(e)) <= 3 * 60000; });
+    });
+  }
   // фоново підвантажити картки, щоб відкривались миттєво
   function prefetch(list) {
     var ids = list.filter(function (b) { return !BIZ[b.id]; }).slice(0, 8).map(function (b) { return b.id; });
