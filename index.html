@@ -100,6 +100,9 @@
   .seg button.on { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
   .form .save { width: 100%; margin: 10px 0 0; }
   .muted { opacity: .55; }
+  #offbar { display: none; margin: 8px 12px 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; background: color-mix(in srgb, #ff9500 16%, var(--bg)); color: var(--text); }
+  #offbar.show { display: block; }
+  #offbar button { margin-left: 8px; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 8px; padding: 2px 8px; font: inherit; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -109,6 +112,7 @@
     <div class="stats" id="stats"></div>
     <div class="tabs" id="tabs"><button class="tab on" data-tab="tasks">Наработки</button><button class="tab" data-tab="all">Усі бізнеси</button><button class="tab" data-tab="admin" id="tabAdmin" style="display:none">Доступи</button></div>
   </header>
+  <div id="offbar"></div>
   <div id="main"><div class="spin">Завантаження…</div></div>
 </div>
 
@@ -132,6 +136,7 @@
   var WD = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
   if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+  if ('serviceWorker' in navigator && !DEMO && /^https/.test(location.protocol)) { try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {} }
   if (!tg || !tg.initData) document.body.classList.add('noTg');
   function initFromHash(h) {
     var m = String(h || '').replace(/^#/, '').split('&').filter(function (kv) { return kv.indexOf('tgWebAppData=') === 0; })[0];
@@ -166,22 +171,79 @@
       }).withFailureHandler(function () { rej(new Error('server')); }).miniApi({ api: action, init: INIT, key: KEY, p: p ? JSON.stringify(p) : '' });
     });
     var url = API + '?api=' + action + '&init=' + encodeURIComponent(INIT) + (KEY ? '&key=' + encodeURIComponent(KEY) : '') + (p ? '&p=' + encodeURIComponent(JSON.stringify(p)) : '');
-    return fetch(url).then(function (r) { return r.json(); }).then(function (r) {
+    return fetch(url).then(function (r) { return r.json(); }, function (e) { e.net = true; throw e; }).then(function (r) {
       if (!r.ok) throw new Error(r.error || 'server');   // коротке слово (auth/forbidden) або речення для людини
       return r.data;
+    }, function (e) { if (e && e.name === 'SyntaxError') e.net = true; throw e; });   // не JSON (збій Google) = теж «нема звʼязку»
+  }
+
+  // ── офлайн: кеш хед-листа в телефоні + черга дій (статус, правки) ──
+  function lsGet(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  function nowKyiv() { try { return new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Kiev' }).slice(0, 16).replace(' ', 'T'); } catch (e) { return new Date().toISOString().slice(0, 16); } }
+  function rid() { return (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).slice(0, 24); }
+  var QKEY = 'hl_q_' + (KEY ? KEY.split('.')[0] : 'tg');
+  var Q = lsGet(QKEY) || [];
+  function saveQ() { lsSet(QKEY, Q); drawBar(); }
+  function drawBar() {
+    var el = $('#offbar'); if (!el) return;
+    var wait = Q.filter(function (x) { return !x.err; }).length, bad = Q.filter(function (x) { return x.err; });
+    var h = '';
+    if (S.offline) h += '📴 Нема звʼязку — показую збережене в телефоні. ';
+    if (wait) h += '⏳ Чекає відправки: <b>' + wait + '</b>. Відправиться, коли зʼявиться звʼязок. ';
+    bad.forEach(function (x) { h += '<div>⚠️ Не прийнято: ' + esc(x.name || '') + ' — ' + esc(x.err) + ' <button data-q="' + esc(x.qid) + '">Прибрати</button></div>'; });
+    el.innerHTML = h; el.classList.toggle('show', !!h);
+    el.querySelectorAll('button[data-q]').forEach(function (b) { b.onclick = function () { Q = Q.filter(function (x) { return x.qid !== b.dataset.q; }); saveQ(); }; });
+  }
+  // запис: онлайн — одразу; нема звʼязку — в чергу з часом дії (сервер порахує візит/статус за цим часом)
+  function apiW(action, p) {
+    p.at = nowKyiv(); p.qid = rid();
+    return api(action, p).catch(function (e) {
+      if (!e || !e.net) throw e;
+      var b = S.data && S.data.businesses.filter(function (x) { return x.id === p.id; })[0];
+      Q.push({ qid: p.qid, action: action, p: p, name: b ? b.name : '' }); saveQ();
+      var nb = b ? JSON.parse(JSON.stringify(b)) : null;
+      if (nb) {
+        if (action === 'status') { nb.status = p.status; if (p.note) nb.last_comment = p.note; }
+        else { if (p.name) nb.name = p.name; if (p.lpr_name !== undefined) nb.lpr_name = p.lpr_name; if (p.lpr_phone) nb.lpr_phone = p.lpr_phone; if (p.note) nb.last_comment = p.note; }
+        nb.queued = true;
+      }
+      cacheList();
+      return { ok: true, queued: true, changed: ['чекає відправки'], business: nb };
     });
   }
+  var flushing = false;
+  function flushQ() {
+    if (flushing || !Q.length) return Promise.resolve();
+    flushing = true;
+    var items = Q.filter(function (x) { return !x.err; }), done = false;
+    function next() {
+      var it = items.shift();
+      if (!it) { done = true; return; }
+      return api(it.action, it.p).then(function () { Q = Q.filter(function (x) { return x.qid !== it.qid; }); saveQ(); return next(); },
+        function (e) {
+          if (e && e.net) { S.offline = true; return; }   // звʼязку ще нема — спробуємо пізніше
+          it.err = String(e && e.message || 'помилка'); if (it.err.length < 4) it.err = errText(e); saveQ(); return next();
+        });
+    }
+    return Promise.resolve(next()).then(function () { flushing = false; if (done) S.offline = false; drawBar(); if (done && S.me) load(true); }, function () { flushing = false; });
+  }
+  function cacheList() { if (S.data && S.agent) lsSet('hl_list_' + S.agent, S.data); }
+  window.addEventListener('online', function () { S.offline = false; var had = Q.length; flushQ().then(function () { if (!had && S.me && S.agent) load(true); }); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && Q.length) flushQ(); });
+  setInterval(function () { if (Q.length && !document.hidden) flushQ(); }, 60000);
   function errText(e) {
     var m = String(e && e.message || e);
     if (m === 'auth') return 'Відкрий застосунок через бота (кнопка «📱 Хед-лист»).';
     if (m === 'not_agent') return 'Тебе немає в списку агентів. Напиши менеджеру.';
     if (m === 'forbidden') return 'Немає доступу.';
-    return 'Не вдалося завантажити. Перевір інтернет і спробуй ще раз.';
+    return 'Нема звʼязку. Перевір інтернет і спробуй ще раз.';
   }
 
   // ── завантаження ──
   function boot() {
-    api('me').then(function (me) {
+    api('me').catch(function (e) { var c = e && e.net && lsGet('hl_me'); if (c) { S.offline = true; return c; } throw e; }).then(function (me) {
+      if (!S.offline) lsSet('hl_me', me);
       S.me = me; S.agent = me.me.role === 'agent' ? me.me.username : (me.agents.filter(function (a) { return a.username !== me.me.username; })[0] || me.me).username;
       $('#who').textContent = me.me.role === 'agent' ? me.me.name : 'Команда';
       if (me.me.role !== 'agent' && me.agents.length) {
@@ -193,13 +255,23 @@
       }
       if (me.me.admin) $('#tabAdmin').style.display = '';
       if (!me.agents.length) { S.tab = 'admin'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === 'admin'); }); }
+      drawBar();
       if (me.agents.length) load(); else if (me.me.admin) render(); else $('#main').innerHTML = '<div class="empty">Доступу до даних агентів поки немає. Його видає власник.</div>';
     }).catch(function (e) { $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
   }
-  function load() {
-    $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
-    api('list', { agent: S.agent }).then(function (data) { S.data = data; BIZ = {}; render(); prefetch(data.businesses.filter(function (b) { return isOpenSt(b.status) || b.next_kind === 'payment'; })); })
-      .catch(function (e) { $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  function load(quiet) {
+    if (!quiet || !S.data) $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
+    api('list', { agent: S.agent }).then(function (data) {
+      S.offline = false; S.data = data; BIZ = {};
+      // ще не відправлені дії лишаємо видимими
+      Q.forEach(function (it) { var b = data.businesses.filter(function (x) { return x.id === it.p.id; })[0]; if (b && !it.err) { if (it.action === 'status') b.status = it.p.status; b.queued = true; } });
+      cacheList(); drawBar(); render(); prefetch(data.businesses.filter(function (b) { return isOpenSt(b.status) || b.next_kind === 'payment'; }));
+      if (Q.length) flushQ();
+    }).catch(function (e) {
+      var c = e && e.net && lsGet('hl_list_' + S.agent);
+      if (c) { S.offline = true; S.data = c; BIZ = {}; drawBar(); render(); return; }
+      $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>';
+    });
   }
 
   // ── шапка ──
@@ -304,7 +376,7 @@
       var typing = ['fName', 'fLpr', 'fPhone', 'fNote', 'stWhy', 'stWhen', 'stFar'].some(function (k) { var x = $('#' + k); return x && (x === document.activeElement || (k === 'fNote' || k === 'stWhy') && x.value); });
       if (typing && $('#hist')) $('#hist').innerHTML = histHtml(r.events);   // не збиваємо те, що людина вже пише
       else renderBiz(r);
-    }).catch(function (e) { if (!cached && !fromList) el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+    }).catch(function (e) { if (!cached && !fromList) el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; else if (e && e.net && $('#hist') && !cached) $('#hist').innerHTML = '<div class="empty">Історія недоступна без звʼязку</div>'; });
   }
   function histHtml(evs) { return evs === null ? '<div class="spin">Завантаження історії…</div>' : evs.length ? evs.map(evRow).join('') : '<div class="empty">Порожньо</div>'; }
   // фоново підвантажити картки, щоб відкривались миттєво
@@ -375,7 +447,7 @@
     var p = { id: b.id, status: to, note: $('#stWhy').value, when: $('#stWhen').value, far: $('#stFar').value };
     var btn = $('#stBtn'), msg = $('#stMsg');
     btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Зберігаю…';
-    api('status', p).then(function (r) {
+    apiW('status', p).then(function (r) {
       btn.disabled = false;
       if (r && r.ok === false) {
         msg.className = 'msg err'; msg.textContent = r.error;
@@ -397,9 +469,9 @@
     var p = { id: b.id, name: $('#fName').value, lpr_name: $('#fLpr').value, lpr_phone: $('#fPhone').value.replace(/\s/g, ''), note: $('#fNote').value };
     var btn = $('#saveBtn'), msg = $('#msg');
     btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Зберігаю…';
-    api('update', p).then(function (r) {
+    apiW('update', p).then(function (r) {
       haptic('medium');
-      msg.textContent = r.changed && r.changed.length ? '✅ Збережено: ' + r.changed.join(', ') : 'Нічого не змінилось';
+      msg.textContent = r.queued ? '📴 Нема звʼязку — збережено в телефоні, відправиться само.' : r.changed && r.changed.length ? '✅ Збережено: ' + r.changed.join(', ') : 'Нічого не змінилось';
       btn.disabled = false;
       var i = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
       if (i >= 0 && r.business) S.data.businesses[i] = r.business;
@@ -409,7 +481,7 @@
           '<button class="save" id="sugBtn" style="width:100%;margin:8px 0 0">🗓 Так, перенести на ' + esc(r.suggest.label) + '</button>';
         $('#sugBtn').onclick = function () {
           $('#sugBtn').disabled = true;
-          api('status', { id: b.id, status: b.status, note: p.note, when: r.suggest.when }).then(function (r2) {
+          apiW('status', { id: b.id, status: b.status, note: p.note, when: r.suggest.when }).then(function (r2) {
             if (r2 && r2.ok === false) { $('#sugBtn').disabled = false; msg.className = 'msg err'; msg.textContent = r2.error || 'Не вдалося перенести.'; return; }
             haptic('medium');
             var j = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
