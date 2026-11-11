@@ -522,7 +522,7 @@
   }
   function evRow(e) {
     var head = [ (KIND[e.kind] || '•') + ' ' + dm(e.date) + (e.start ? ' ' + t(e.start) : '') ];
-    if (e.kind === 'visit') head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін');
+    if (e.kind === 'visit') { head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін'); if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') head.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt)); }
     if (e.kind === 'status') head.push(e.status_before === e.status_after ? '🗓 перенесено' + (e.next_dt ? ' на ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '') : 'статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + ST[e.status_after || '']);
     if (e.result === 'nbt') head.push('НБТ');
     if (e.door) head.push('двері');
