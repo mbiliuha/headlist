@@ -348,13 +348,14 @@
     var x = S.data, today = d(x.now), tomorrow = addDays(today, 1);
     var open = x.businesses.filter(function (b) { return isOpenSt(b.status) || (b.status === 'green' && b.next_kind === 'payment' && b.next_dt); });
     open.sort(function (a, b) { return String(a.next_dt || '9').localeCompare(String(b.next_dt || '9')); });
-    var over = [], td = [], tm = [], later = [], nodate = [];
+    var over = [], td = [], tm = [], later = [], nodate = [], rt = [];
     open.forEach(function (b) {
       if (!b.next_dt) return nodate.push(b);
       var dd = d(b.next_dt);
-      if (dd < today) over.push(b); else if (dd === today) td.push(b); else if (dd === tomorrow) tm.push(b); else later.push(b);
+      if (b.retry && dd <= today) rt.push(b);   // автоповтор після «нбт» — окремо, не як прострочене
+      else if (dd < today) over.push(b); else if (dd === today) td.push(b); else if (dd === tomorrow) tm.push(b); else later.push(b);
     });
-    var h = group('⏰ Прострочено', over, 'over', true) + group('Сьогодні', td, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true) + group('⚠️ Без дати', nodate, 'over', true);
+    var h = group('⏰ Прострочено', over, 'over', true) + group('Сьогодні', td, '', true) + group('🔁 Повтори після «нбт»', rt, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true) + group('⚠️ Без дати', nodate, 'over', true);
     return h || '<div class="empty">Наработок немає. Час на нові двері 🚪</div>';
   }
   function allView() {
@@ -483,7 +484,7 @@
     var b = r.business, ed = r.editable, el = $('#detail');
     var next = '';
     if (b.next_dt && (isOpenSt(b.status) || b.next_kind === 'payment')) next = '<div class="next' + (b.overdue ? ' over' : '') + '">' + (b.overdue ? '⏰ Прострочено: ' : '↪ ') +
-      (b.next_kind === 'meeting' ? 'зустріч ' : b.next_kind === 'payment' ? '💰 дзвінок щодо оплати ' : b.status === 'yellow' ? 'передзвон «думає» ' : 'вийти на ЛПР ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) + (b.deferred ? ' · відкладено: ' + esc(b.deferred) : '') + '</div>';
+      (b.next_kind === 'meeting' ? 'зустріч ' : b.next_kind === 'payment' ? '💰 дзвінок щодо оплати ' : b.next_kind === 'retry' ? '🔁 повторний дзвінок після «нбт» ' : b.status === 'yellow' ? 'передзвон «думає» ' : 'вийти на ЛПР ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) + (b.deferred ? ' · відкладено: ' + esc(b.deferred) : '') + '</div>';
     var phone = b.lpr_phone ? '<a class="callbtn" href="tel:+' + esc(b.lpr_phone) + '" onclick="return callNum(event,\'' + esc(b.id) + '\',\'' + esc(b.lpr_phone) + '\')">📞 Дзвонити</a>' : '';
     var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>' + esc(b.name) + '</h1>' +
       '<span class="pill"><span class="dot s-' + (b.status || 'none') + '" style="margin:0"></span>' + ST[b.status || ''] + (b.status === 'red' ? (b.red_kind === 'exhausted' ? ' · пробити неможливо' : b.red_kind === 'closed' ? ' · бізнес закрився' : b.red_kind === 'meeting' ? ' · відмова від зустрічі (тел.)' : ' · відмова ЛПР') : '') + '</span>' + next + '</div>';
@@ -580,6 +581,23 @@
             delete BIZ[b.id]; openBiz(b.id); render();
           }).catch(function (e) { msg.className = 'msg err'; msg.textContent = String(e && e.message || '').length > 15 ? e.message : errText(e); });
         };
+      } else if (r.snooze && r.snooze.length) {
+        msg.innerHTML = '✅ Нотатку збережено. Це була спроба? Перенести наступний крок на:' +
+          r.snooze.map(function (o, k) { return '<button class="save snz" data-k="' + k + '" style="width:100%;margin:8px 0 0">🗓 ' + esc(o.label) + '</button>'; }).join('') +
+          '<button class="save" id="snzNo" style="width:100%;margin:8px 0 0;background:transparent;color:var(--hint,#888);border:1px solid var(--hint,#888)">Не переносити</button>';
+        document.querySelectorAll('.snz').forEach(function (el) {
+          el.onclick = function () {
+            document.querySelectorAll('.snz').forEach(function (x) { x.disabled = true; });
+            apiW('update', { id: b.id, snooze: r.snooze[Number(el.dataset.k)].when }).then(function (r2) {
+              if (r2 && r2.ok === false) { document.querySelectorAll('.snz').forEach(function (x) { x.disabled = false; }); msg.className = 'msg err'; msg.textContent = r2.error || 'Не вдалося перенести.'; return; }
+              haptic('medium');
+              var j = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
+              if (j >= 0 && r2.business) S.data.businesses[j] = r2.business;
+              delete BIZ[b.id]; openBiz(b.id, true); render();
+            }).catch(function (e2) { msg.className = 'msg err'; msg.textContent = String(e2 && e2.message || '').length > 15 ? e2.message : errText(e2); });
+          };
+        });
+        $('#snzNo').onclick = function () { delete BIZ[b.id]; openBiz(b.id, true); };
       } else if (p.note) { delete BIZ[b.id]; openBiz(b.id, true); }
     }).catch(function (e) {
       btn.disabled = false; msg.className = 'msg err';
