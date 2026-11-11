@@ -107,8 +107,9 @@
   .dsum { margin: 8px 12px 0; font-size: 14px; color: var(--hint); }
   .drow { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--sep); cursor: pointer; }
   .drow:active { background: var(--bg2); }
-  .drow .tm { flex: none; width: 52px; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--hint); line-height: 1.3; }
+  .drow .tm { flex: none; width: 62px; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--hint); line-height: 1.3; }
   .drow .tm b { display: block; color: var(--text); font-size: 15px; }
+  .drow .tm .dmin { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--link, #2481cc); }
   .drow .bd { flex: 1; min-width: 0; }
   .drow .nm { font-weight: 600; }
   .drow .mt { font-size: 13px; color: var(--hint); margin-top: 2px; }
@@ -332,7 +333,7 @@
     if (!S.data) return load();
     stats();
     var x = S.data, html = '';
-    if (x.open) html += '<div class="banner">📌 Зараз у візиті з ' + t(x.open.start) + (x.open.bizName ? ': <b>' + esc(x.open.bizName) + '</b>' : '') + '</div>';
+    if (x.open) html += '<div class="banner" id="openBn" data-start="' + esc(x.open.start) + '">📌 Зараз у візиті з ' + t(x.open.start) + (x.open.bizName ? ': <b>' + esc(x.open.bizName) + '</b>' : '') + ' · ⏱ <b id="openMin">' + dur(Math.max(0, mins(x.open.start, nowKyiv()))) + '</b></div>';
     if (S.tab === 'day') { $('#main').innerHTML = html + '<div id="dayBox"><div class="spin">Завантаження…</div></div>'; return loadDay(); }
     if (S.tab === 'tasks') html += tasksView(); else html += allView();
     $('#main').innerHTML = html;
@@ -414,14 +415,15 @@
     if (!isToday) { $('#dNext').onclick = function () { var nx = addDays(date, 1); go(nx >= r.today ? '' : nx); }; $('#dToday').onclick = function () { go(''); }; }
     box.querySelectorAll('.drow').forEach(function (el) { el.onclick = function () { if (el.dataset.id) openBiz(el.dataset.id); }; });
   }
+  setInterval(function () { var el = $('#openMin'), bn = $('#openBn'); if (el && bn) el.textContent = dur(Math.max(0, mins(bn.dataset.start, nowKyiv()))); }, 30000);
   function mins(a, b) { var x = Date.parse(a + ':00Z'), y = Date.parse(b + ':00Z'); return isNaN(x) || isNaN(y) ? 0 : Math.round((y - x) / 60000); }
   function dur(m) { return m >= 60 ? Math.floor(m / 60) + ' год ' + (m % 60 ? m % 60 + ' хв' : '') : m + ' хв'; }
   function dayRow(e) {
-    var tm = '<b>' + t(e.start) + '</b>' + (e.kind === 'visit' && e.end && e.end !== e.start ? t(e.end) : '');
+    var isV = e.kind === 'visit' && e.end && e.end !== e.start;
+    var tm = '<b>' + t(e.start) + '</b>' + (isV ? '→ ' + t(e.end) : '') + (e.kind === 'visit' ? '<span class="dmin">' + dur(e.minutes || mins(e.start, e.end)) + '</span>' : '');
     var meta = [], ico = KIND[e.kind] || '•';
     if (e.kind === 'visit') {
       meta.push(e.door ? '🚪 двері' : (e.status_before === 'yellow' ? '🔁 повтор' : '↩️ повернення'));
-      meta.push(e.minutes + ' хв');
       meta.push(e.who === 'L' ? '🤝 ЛПР' + (e.lpr_name ? ' ' + e.lpr_name : '') : e.who === 'A' ? 'адмін' : '');
     } else if (e.kind === 'call') { meta.push('📞 дзвінок'); if (e.result === 'nbt') meta.push('НБТ'); }
     else if (e.kind === 'status') meta.push(e.status_before === e.status_after ? '🗓 перенесено' : '🔄 статус');
