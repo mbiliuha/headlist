@@ -139,7 +139,11 @@
   .drow .nm { font-weight: 600; }
   .drow .mt { font-size: 14px; color: var(--text2); margin-top: 2px; }
   .drow .cm { font-size: 14px; line-height: 1.4; margin-top: 3px; }
-  .gap { padding: 6px 16px 6px calc(26px + 4.5em); font-size: 13px; color: var(--text2); background: var(--bg2); border-bottom: 1px solid var(--sep); }
+  .gap { padding: 8px 16px 8px calc(26px + 4.5em); font-size: 14px; font-weight: 600; color: #d32f2f; background: rgba(229,57,53,.12); background: color-mix(in srgb, #e53935 13%, var(--bg)); border-bottom: 1px solid var(--sep); border-left: 4px solid #e53935; }
+  .dsum { display: flex; gap: 8px; align-items: flex-start; }
+  .dsum .st { flex: 1; min-width: 0; }
+  .ord { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 10px; min-height: 36px; font: inherit; font-size: 13px; white-space: nowrap; }
+  .ord:active { opacity: .6; }
   #offbar { display: none; margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; background: rgba(255,149,0,.18); background: color-mix(in srgb, #ff9500 16%, var(--bg)); color: var(--text); }
   #offbar.show { display: block; }
   #offbar button { margin-left: 8px; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 8px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: 14px; }
@@ -494,23 +498,27 @@
       '<button id="dNext"' + (isToday ? ' disabled' : '') + '>›</button>' + (isToday ? '' : '<button id="dToday">Сьогодні</button>') + '</div>';
     var visits = r.rows.filter(function (e) { return e.kind === 'visit'; });
     var last = r.rows.length ? r.rows[r.rows.length - 1] : null;
-    h += '<div class="dsum">🚪 дверей <b>' + c.doors + '</b>/' + n.doors + ' · 🤝 ЛПР <b>' + c.lpr + '</b>/' + n.lpr + ' · ⏱ ≥' + n.qualityMin + ' хв <b>' + c.quality + '</b>' +
+    var rev = lsGet('hl_dayord') === 'rev';
+    h += '<div class="dsum"><div class="st">🚪 дверей <b>' + c.doors + '</b>/' + n.doors + ' · 🤝 ЛПР <b>' + c.lpr + '</b>/' + n.lpr + ' · ⏱ ≥' + n.qualityMin + ' хв <b>' + c.quality + '</b>' +
       (c.repeats || c.returns ? ' · повтори ' + (c.repeats + c.returns) : '') +
-      (visits.length ? '<br>перший візит ' + t(visits[0].start) + ' · останній запис ' + t(last.end || last.start) : '') + '</div>';
+      (visits.length ? '<br>перший візит ' + t(visits[0].start) + ' · останній запис ' + t(last.end || last.start) : '') + '</div>' +
+      (r.rows.length > 1 ? '<button class="ord" id="dOrd">' + (rev ? '↑ спершу останні' : '↓ з ранку') + '</button>' : '') + '</div>';
     if (!r.rows.length) h += '<div class="empty">' + (isToday ? 'Сьогодні ще нічого не записано' : 'Цього дня записів немає') + '</div>';
     else {
       h += '<div class="group"><div class="list">';
-      var prevEnd = '';
-      dedupEv(r.rows).forEach(function (e) {
+      var prevEnd = '', items = [];
+      dedupEv(r.rows).forEach(function (e) {   // перерви рахуємо завжди по ходу дня, а показуємо в обраному порядку
         var st = e.start, gap = prevEnd && st ? mins(prevEnd, st) : 0;
-        if (e.kind === 'visit' && gap >= 30) h += '<div class="gap">⏸ ' + dur(gap) + ' без записів</div>';
-        h += dayRow(e);
+        items.push({ gap: e.kind === 'visit' && gap >= 30 ? '<div class="gap">⏸ ' + dur(gap) + ' без записів</div>' : '', row: dayRow(e) });
         if (e.kind === 'visit') prevEnd = e.end || e.start;
       });
+      if (rev) items.reverse().forEach(function (it) { h += it.row + it.gap; });
+      else items.forEach(function (it) { h += it.gap + it.row; });
       h += '</div></div>';
     }
     box.innerHTML = h + '<div style="height:24px"></div>';
     function go(k) { S.day = k; haptic(); loadDay(); }
+    if ($('#dOrd')) $('#dOrd').onclick = function () { lsSet('hl_dayord', rev ? 'fwd' : 'rev'); haptic(); drawDay(r); };
     $('#dPrev').onclick = function () { go(addDays(date, -1)); };
     if (!isToday) { $('#dNext').onclick = function () { var nx = addDays(date, 1); go(nx >= r.today ? '' : nx); }; $('#dToday').onclick = function () { go(''); }; }
     box.querySelectorAll('.drow').forEach(function (el) { el.onclick = function () { if (el.dataset.id) openBiz(el.dataset.id); }; });
