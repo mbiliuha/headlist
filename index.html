@@ -2,7 +2,9 @@
 <html lang="uk">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'unsafe-inline'; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://*.googleusercontent.com; img-src 'self' data:; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <title>Хед-лист</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
@@ -14,110 +16,134 @@
     --link: var(--tg-theme-link-color, #2b7de9);
     --btn: var(--tg-theme-button-color, #2b7de9);
     --btn-text: var(--tg-theme-button-text-color, #ffffff);
-    --sep: color-mix(in srgb, var(--hint) 25%, transparent);
-    --red: #e5484d; --yellow: #f5b400; --blue: #3b82f6; --green: #22a861; --gray: #a0a4ab;
+    --text2: var(--hint);                 /* другорядний текст (читабельніший за hint) */
+    --sep: rgba(128,128,128,.28);
+    --red: #e5484d; --yellow: #f5b400; --blue: #3b82f6; --green: #22a861; --gray: #a0a4ab;   /* крапки й заливки */
+    --red-t: #c9343a; --green-t: #18794e; --blue-t: #2563eb; --amber-t: #946200; --call: #18794e;   /* ті самі кольори для тексту (контраст ≥4.5) */
+    --sab: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
   }
+  @supports (color: color-mix(in srgb, red 50%, blue)) {
+    :root { --text2: color-mix(in srgb, var(--text) 65%, var(--bg)); --sep: color-mix(in srgb, var(--text) 14%, transparent); }
+  }
+  :root.dark { --red-t: #ff6b6e; --green-t: #3dd68c; --blue-t: #6ea8ff; --amber-t: #ffc53d; --call: #1a7f55; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; background: var(--bg2); color: var(--text); font: 16px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { padding-bottom: env(safe-area-inset-bottom); }
+  body { padding-bottom: var(--sab); overscroll-behavior-y: none; }
+  body.lock { overflow: hidden; }
+  ::placeholder { color: var(--hint); opacity: 1; }
+  button, .tab, .chip, a.rcall, a.callbtn { touch-action: manipulation; }
   .wrap { max-width: 640px; margin: 0 auto; }
-  header { background: var(--bg); padding: 12px 16px 10px; position: sticky; top: 0; z-index: 5; border-bottom: 1px solid var(--sep); }
+  header { background: var(--bg); padding: 12px 16px 8px; }
+  .tabsbar { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 4px 12px 8px; border-bottom: 1px solid var(--sep); }
   .row { display: flex; align-items: center; gap: 8px; }
   .who { font-weight: 600; font-size: 17px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  select { font: inherit; color: var(--text); background: var(--bg2); border: 0; border-radius: 10px; padding: 6px 10px; max-width: 55%; }
-  .stats { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  select { font: inherit; color: var(--text); background: var(--bg2); border: 0; border-radius: 10px; padding: 10px 10px; min-height: 44px; max-width: 60%; }
+  .stats { display: flex; gap: 6px; margin-top: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .stats::-webkit-scrollbar { display: none; }
   .stat { background: var(--bg2); border-radius: 10px; padding: 5px 9px; font-size: 14px; white-space: nowrap; }
   .stat b { font-weight: 700; }
-  .stat.bad b { color: var(--red); }
-  .tabs { display: flex; background: var(--bg2); border-radius: 10px; padding: 3px; margin-top: 10px; }
-  .tab { flex: 1; text-align: center; padding: 7px 4px; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--hint); border: 0; background: none; font-family: inherit; }
+  .stat.bad b { color: var(--red-t); }
+  .tabs { display: flex; background: var(--bg2); border-radius: 10px; padding: 3px; }
+  .tab { flex: 1; text-align: center; padding: 9px 4px; min-height: 40px; white-space: nowrap; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--text2); border: 0; background: none; font-family: inherit; }
   .tab.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
-  .banner { margin: 10px 12px 0; background: color-mix(in srgb, var(--btn) 14%, var(--bg)); border-radius: 12px; padding: 10px 12px; font-size: 15px; }
+  .banner { margin: 10px 12px 0; background: rgba(43,125,233,.14); background: color-mix(in srgb, var(--btn) 14%, var(--bg)); border-radius: 12px; padding: 10px 12px; font-size: 15px; }
   .group { margin: 14px 0 0; }
-  .gtitle { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--hint); padding: 0 16px 6px; display: flex; justify-content: space-between; }
-  .gtitle.over { color: var(--red); }
+  .gtitle { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--text2); padding: 0 16px 6px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .gtitle span:first-child { white-space: nowrap; font-weight: 600; }
+  .gtitle.over span:first-child { color: var(--red-t); }
   .list { background: var(--bg); border-top: 1px solid var(--sep); border-bottom: 1px solid var(--sep); }
   .item { display: flex; gap: 10px; padding: 11px 16px; align-items: flex-start; border-bottom: 1px solid var(--sep); cursor: pointer; }
   .item:last-child { border-bottom: 0; }
   .item:active { background: var(--bg2); }
-  .time { width: 48px; flex: none; font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 1px; }
-  .time.over { color: var(--red); }
-  .time small { display: block; font-weight: 400; font-size: 12px; color: var(--hint); }
-  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; margin-top: 6px; background: var(--gray); }
+  .time { width: 3.3em; min-width: 48px; flex: none; font-weight: 700; font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .time.over { color: var(--red-t); }
+  .time small { display: block; font-weight: 400; font-size: 13px; color: var(--text2); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; margin-top: 5px; background: var(--gray); }
   .s-yellow { background: var(--yellow); } .s-blue { background: var(--blue); } .s-white { background: #fff; box-shadow: inset 0 0 0 1.5px var(--gray); } .s-green { background: var(--green); } .s-red { background: var(--red); }
   .body { flex: 1; min-width: 0; }
-  .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .sub { font-size: 14px; color: var(--hint); margin-top: 1px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-  .sub a { color: var(--link); text-decoration: none; font-weight: 500; }
-  .note { font-size: 14px; margin-top: 3px; color: var(--text); opacity: .8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .empty { text-align: center; color: var(--hint); padding: 28px 16px; font-size: 15px; }
+  .name { font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+  .sub { font-size: 14px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+  .sub span { white-space: nowrap; display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; }
+  .sub span:not(:last-child)::after { content: ' ·'; }
+  .stx { font-weight: 600; }
+  .stx.t-yellow { color: var(--amber-t); } .stx.t-blue { color: var(--blue-t); } .stx.t-green { color: var(--green-t); } .stx.t-red { color: var(--red-t); }
+  .rcall { flex: none; width: 44px; height: 44px; margin: -2px -6px 0 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg2); text-decoration: none; font-size: 18px; }
+  .rcall:active { opacity: .6; }
+  .qd { color: var(--amber-t); font-weight: 600; }
+  .note { font-size: 14px; line-height: 1.4; margin-top: 3px; color: var(--text); opacity: .8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .empty { text-align: center; color: var(--text2); padding: 28px 16px; font-size: 15px; }
   .search { padding: 10px 12px 0; }
-  .search input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--sep); border-radius: 12px; padding: 10px 12px; outline: none; }
-  .chips { display: flex; gap: 6px; padding: 10px 12px 0; overflow-x: auto; scrollbar-width: none; }
+  .search input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--sep); border-radius: 12px; padding: 11px 12px; min-height: 44px; outline: none; }
+  .chips { display: flex; gap: 8px; padding: 10px 12px 0; overflow-x: auto; scrollbar-width: none; }
   .chips::-webkit-scrollbar { display: none; }
-  .chip { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 14px; }
+  .chip { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 999px; padding: 10px 14px; min-height: 42px; font: inherit; font-size: 14px; }
+  .chip small { opacity: .7; font-size: 13px; margin-left: 2px; }
   .chip.on { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
   /* картка бізнесу */
-  #detail { position: fixed; inset: 0; background: var(--bg2); overflow-y: auto; z-index: 20; display: none; }
+  #detail { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg2); overflow-y: auto; z-index: 20; display: none; padding-bottom: calc(var(--sab) + 24px); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   #detail.show { display: block; }
   .dhead { background: var(--bg); padding: 14px 16px; border-bottom: 1px solid var(--sep); }
   .dhead h1 { font-size: 21px; margin: 0; line-height: 1.25; }
   .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; margin-top: 6px; padding: 3px 10px; border-radius: 999px; background: var(--bg2); }
   .next { margin-top: 8px; font-size: 15px; }
-  .next.over { color: var(--red); font-weight: 600; }
+  .next.over { color: var(--red-t); font-weight: 600; }
   .sec { margin-top: 14px; }
-  .sec h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--hint); margin: 0 16px 6px; font-weight: 500; }
+  .sec h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--text2); margin: 0 16px 6px; font-weight: 500; }
   .card { background: var(--bg); border-top: 1px solid var(--sep); border-bottom: 1px solid var(--sep); padding: 4px 16px; }
-  .field { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--sep); }
+  .field { display: flex; align-items: center; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--sep); }
   .field:last-child { border-bottom: 0; }
-  .field label { width: 74px; flex: none; color: var(--hint); font-size: 14px; }
-  .field input, textarea { flex: 1; min-width: 0; font: inherit; color: var(--text); background: transparent; border: 0; outline: none; padding: 4px 0; }
-  .callbtn { flex: none; background: var(--green); color: #fff; border-radius: 999px; padding: 6px 12px; text-decoration: none; font-size: 14px; font-weight: 600; }
+  .field label { width: 5.3em; flex: none; color: var(--text2); font-size: 14px; }
+  .field input, textarea { flex: 1; min-width: 0; font: inherit; color: var(--text); background: transparent; border: 0; outline: none; padding: 11px 0; text-overflow: ellipsis; }
+  .callbtn { flex: none; background: var(--call); color: #fff; border-radius: 999px; padding: 11px 16px; text-decoration: none; font-size: 15px; font-weight: 600; }
   textarea { width: 100%; resize: none; min-height: 64px; padding: 10px 0; }
-  .save { display: block; width: calc(100% - 32px); margin: 12px 16px 0; background: var(--btn); color: var(--btn-text); border: 0; border-radius: 12px; padding: 12px; font: inherit; font-weight: 600; }
+  .save { display: block; width: calc(100% - 32px); margin: 12px 16px 0; background: var(--btn); color: var(--btn-text); border: 0; border-radius: 12px; padding: 14px 12px; min-height: 48px; font: inherit; font-weight: 600; }
   .save:disabled { opacity: .5; }
-  .msg { margin: 8px 16px 0; font-size: 14px; color: var(--hint); min-height: 18px; }
-  .msg.err { color: var(--red); }
+  .save:active, .callbtn:active { filter: brightness(.88); }
+  .tab:active, .chip:active, .seg button:active, .daynav button:active, .mini:active, .addbtn:active { opacity: .6; }
+  .msg { margin: 8px 16px 0; font-size: 14px; color: var(--text2); min-height: 18px; }
+  .msg.err { color: var(--red-t); }
   .ev { padding: 10px 0; border-bottom: 1px solid var(--sep); }
   .ev:last-child { border-bottom: 0; }
-  .evh { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--hint); }
+  .evh { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--text2); }
   .evh .dot { margin-top: 0; }
-  .evt { font-size: 15px; margin-top: 3px; white-space: pre-wrap; word-wrap: break-word; }
-  .evn { font-size: 14px; margin-top: 3px; color: var(--hint); white-space: pre-wrap; word-wrap: break-word; }
+  .evt { font-size: 15px; line-height: 1.4; margin-top: 3px; white-space: pre-wrap; word-wrap: break-word; }
+  .evn { font-size: 14px; margin-top: 3px; color: var(--text2); white-space: pre-wrap; word-wrap: break-word; }
   .back { background: none; border: 0; color: var(--link); font: inherit; padding: 0 0 8px; display: none; }
   .noTg .back { display: inline-block; }
-  .spin { text-align: center; padding: 40px; color: var(--hint); }
-  .tag { font-size: 12px; padding: 1px 7px; border-radius: 999px; background: var(--bg2); color: var(--hint); }
-  .tag.edit { background: color-mix(in srgb, var(--green) 18%, var(--bg)); color: var(--green); }
+  .spin { text-align: center; padding: 40px; color: var(--text2); }
+  .tag { font-size: 13px; padding: 1px 7px; border-radius: 999px; background: var(--bg2); color: var(--text2); }
+  .tag.edit { background: rgba(34,168,97,.16); color: var(--green-t); }
   .tag.off { text-decoration: line-through; }
-  .mini { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--red); border-radius: 10px; padding: 5px 10px; font: inherit; font-size: 14px; }
+  .mini { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--red-t); border-radius: 10px; padding: 10px 12px; min-height: 44px; font: inherit; font-size: 14px; }
   .addbtn { display: block; width: calc(100% - 24px); margin: 10px 12px 0; background: var(--bg); color: var(--link); border: 1px dashed var(--sep); border-radius: 12px; padding: 11px; font: inherit; font-weight: 600; }
   .form { background: var(--bg); margin: 10px 12px 0; border-radius: 12px; padding: 4px 14px 12px; }
-  .form .field label { width: 92px; }
+  .form .field { flex-wrap: wrap; }
+  .form .field label { width: auto; min-width: 6.6em; }
   .form select { max-width: none; flex: 1; }
-  .seg { display: flex; gap: 6px; flex-wrap: wrap; padding: 8px 0; }
-  .seg button { border: 1px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 10px; padding: 7px 11px; font: inherit; font-size: 14px; }
+  .seg { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0; }
+  .seg button { border: 1px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 10px; padding: 10px 13px; min-height: 44px; font: inherit; font-size: 15px; }
   .seg button.on { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
   .form .save { width: 100%; margin: 10px 0 0; }
   .muted { opacity: .55; }
   .daynav { display: flex; align-items: center; gap: 8px; padding: 10px 12px 0; }
   .daynav b { flex: 1; text-align: center; font-size: 16px; }
-  .daynav button { border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 12px; font: inherit; font-size: 15px; }
+  .daynav button { border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 10px 14px; min-width: 48px; min-height: 44px; font: inherit; font-size: 16px; }
   .daynav button:disabled { opacity: .35; }
-  .dsum { margin: 8px 12px 0; font-size: 14px; color: var(--hint); }
+  .dsum { margin: 8px 12px 0; font-size: 14px; color: var(--text2); }
   .drow { display: flex; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--sep); cursor: pointer; }
   .drow:active { background: var(--bg2); }
-  .drow .tm { flex: none; width: 62px; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--hint); line-height: 1.3; }
+  .drow .tm { flex: none; width: 4.5em; min-width: 62px; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--text2); line-height: 1.3; }
   .drow .tm b { display: block; color: var(--text); font-size: 15px; }
-  .drow .tm .dmin { display: block; margin-top: 2px; font-size: 12px; font-weight: 600; color: var(--link, #2481cc); }
+  .drow .tm .dmin { display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--link, #2481cc); }
   .drow .bd { flex: 1; min-width: 0; }
   .drow .nm { font-weight: 600; }
-  .drow .mt { font-size: 13px; color: var(--hint); margin-top: 2px; }
-  .drow .cm { font-size: 14px; margin-top: 3px; }
-  .gap { padding: 6px 16px 6px 78px; font-size: 13px; color: var(--hint); background: var(--bg2); border-bottom: 1px solid var(--sep); }
-  #offbar { display: none; margin: 8px 12px 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; background: color-mix(in srgb, #ff9500 16%, var(--bg)); color: var(--text); }
+  .drow .mt { font-size: 14px; color: var(--text2); margin-top: 2px; }
+  .drow .cm { font-size: 14px; line-height: 1.4; margin-top: 3px; }
+  .gap { padding: 6px 16px 6px calc(26px + 4.5em); font-size: 13px; color: var(--text2); background: var(--bg2); border-bottom: 1px solid var(--sep); }
+  #offbar { display: none; margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; background: rgba(255,149,0,.18); background: color-mix(in srgb, #ff9500 16%, var(--bg)); color: var(--text); }
   #offbar.show { display: block; }
-  #offbar button { margin-left: 8px; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 8px; padding: 2px 8px; font: inherit; font-size: 13px; }
+  #offbar button { margin-left: 8px; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 8px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: 14px; }
+  .reset { display: inline-block; margin-top: 12px; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 10px 16px; min-height: 44px; font: inherit; }
 </style>
 </head>
 <body>
@@ -125,9 +151,11 @@
   <header>
     <div class="row"><div class="who" id="who">Хед-лист</div><select id="agentSel" style="display:none"></select></div>
     <div class="stats" id="stats"></div>
-    <div class="tabs" id="tabs"><button class="tab on" data-tab="tasks">Наработки</button><button class="tab" data-tab="day">День</button><button class="tab" data-tab="all">Усі бізнеси</button><button class="tab" data-tab="admin" id="tabAdmin" style="display:none">Доступи</button></div>
   </header>
-  <div id="offbar"></div>
+  <div class="tabsbar">
+    <div class="tabs" id="tabs"><button class="tab on" data-tab="tasks">Наработки</button><button class="tab" data-tab="day">День</button><button class="tab" data-tab="all">Усі бізнеси</button><button class="tab" data-tab="admin" id="tabAdmin" style="display:none">Доступи</button></div>
+    <div id="offbar"></div>
+  </div>
   <div id="main"><div class="spin">Завантаження…</div></div>
 </div>
 
@@ -144,13 +172,28 @@
   var GAS = !!(window.google && google.script && google.script.run);
   var INIT = tg && tg.initData ? tg.initData : '';
   var KEY = '';   // персональний ключ із кнопки бота (Apps Script підставляє його сюди)
-  if (!KEY) { var km = location.search.match(/[?&]k=([^&]+)/); if (km) KEY = decodeURIComponent(km[1]); }
+  if (!KEY) { var km = location.search.match(/[?&]k=([^&]+)/); if (km) { try { KEY = decodeURIComponent(km[1]); } catch (e) { KEY = ''; } } }
+  // ключ не лишаємо в адресному рядку (історія, скріншоти)
+  try { if (KEY && history.replaceState) history.replaceState(null, '', location.pathname + (DEMO ? '?demo=1' : '')); } catch (e) {}
   var S = { me: null, agent: null, data: null, tab: 'tasks', q: '', filter: '' };
   var ST = { green: 'Договір', red: 'Відпрацьовано', yellow: 'Думає', blue: 'Зустріч з ЛПР', white: 'Вийти на ЛПР', '': 'Без статусу' };
   function isOpenSt(s) { return s === 'yellow' || s === 'blue' || s === 'white'; }
   var WD = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
 
-  if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+  if (tg) {
+    try { tg.ready(); tg.expand(); } catch (e) {}
+    try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {}   // свайп униз не згортає застосунок посеред набору нотатки
+    try { tg.setHeaderColor && tg.setHeaderColor('bg_color'); tg.setBackgroundColor && tg.setBackgroundColor('secondary_bg_color'); } catch (e) {}
+  }
+  function scheme() {
+    var dark, bgc = tg && tg.themeParams && tg.themeParams.bg_color, m = /^#([0-9a-f]{6})$/i.exec(bgc || '');
+    if (m) { var n = parseInt(m[1], 16); dark = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) < 128; }   // найнадійніше — за фактичним кольором фону
+    else if (tg && tg.colorScheme) dark = tg.colorScheme === 'dark';
+    else dark = !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches && tg && tg.initData);
+    document.documentElement.classList.toggle('dark', dark);
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+  }
+  scheme(); try { tg && tg.onEvent && tg.onEvent('themeChanged', scheme); } catch (e) {}
   if ('serviceWorker' in navigator && !DEMO && /^https/.test(location.protocol)) { try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {} }
   if (!tg || !tg.initData) document.body.classList.add('noTg');
   function initFromHash(h) {
@@ -159,7 +202,9 @@
   }
 
   function $(s) { return document.querySelector(s); }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"'`]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' }[c]; }); }
+  function cls(v) { return /^[a-z]{1,12}$/.test(String(v || '')) ? v : 'none'; }   // значення для CSS-класу — лише відомі слова
+  function digits(v) { return String(v || '').replace(/\D/g, ''); }
   function d(dt) { return String(dt || '').slice(0, 10); }
   function t(dt) { return String(dt || '').slice(11, 16); }
   function dm(s) { var a = String(s).split('-'); return a[2] + '.' + a[1]; }
@@ -168,15 +213,22 @@
   // tel: усередині Telegram (особливо iOS) не відкривається — відкриваємо маленьку сторінку call.html у браузері, вона набирає номер
   window.callNum = function (ev, id, p) {
     if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+    p = digits(p);
     if (!(tg && tg.platform && tg.platform !== 'unknown') || DEMO) { location.href = 'tel:+' + p; return false; }
     haptic('medium');
     api('call', { id: id }).then(function () {
-      try { tg.showAlert('Номер надіслано в чат бота — тисни на нього там, і Telegram запропонує подзвонити.', function () { tg.close(); }); } catch (e) { tg.close(); }
+      var keep = dirty();   // є незбережена нотатка — застосунок не закриваємо
+      try { tg.showAlert('Номер надіслано в чат бота — тисни на нього там, і Telegram запропонує подзвонити.' + (keep ? '\n\nНотатку ще не збережено — спершу натисни «Зберегти».' : ''), function () { if (!keep) tg.close(); }); } catch (e) { if (!keep) tg.close(); }
     }).catch(function (e) { try { tg.showAlert(String(e && e.message || '').length > 15 ? e.message : 'Не вдалося. Номер: +' + p); } catch (x) {} });
     return false;
   };
   function phoneFmt(p) { return p && p.length === 12 ? '+' + p.slice(0, 2) + ' ' + p.slice(2, 5) + ' ' + p.slice(5, 8) + ' ' + p.slice(8, 10) + ' ' + p.slice(10) : (p || ''); }
   function haptic(k) { try { tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred(k || 'light'); } catch (e) {} }
+  function hn(k) { try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(k); } catch (e) {} }
+  // незбережений текст: питаємо перед закриттям
+  function dirty() { return ['fNote', 'stWhy'].some(function (k) { var x = $('#' + k); return x && x.value.trim(); }) && $('#detail').classList.contains('show'); }
+  function syncDirty() { try { if (!tg) return; if (dirty()) tg.enableClosingConfirmation && tg.enableClosingConfirmation(); else tg.disableClosingConfirmation && tg.disableClosingConfirmation(); } catch (e) {} }
+  document.addEventListener('input', syncDirty);
 
   function api(action, p) {
     if (DEMO) return Promise.resolve(demo(action, p));
@@ -186,8 +238,10 @@
       }).withFailureHandler(function () { rej(new Error('server')); }).miniApi({ api: action, init: INIT, key: KEY, p: p ? JSON.stringify(p) : '' });
     });
     var url = API + '?api=' + action + '&init=' + encodeURIComponent(INIT) + (KEY ? '&key=' + encodeURIComponent(KEY) : '') + (p ? '&p=' + encodeURIComponent(JSON.stringify(p)) : '');
-    return fetch(url).then(function (r) { return r.json(); }, function (e) { e.net = true; throw e; }).then(function (r) {
-      if (!r.ok) throw new Error(r.error || 'server');   // коротке слово (auth/forbidden) або речення для людини
+    // зависле зʼєднання не тримає «Завантаження…» вічно: через 20 с вважаємо, що звʼязку нема (повтор запису сервер розпізнає за qid)
+    var ac = window.AbortController ? new AbortController() : null, tmo = setTimeout(function () { try { ac && ac.abort(); } catch (e) {} }, 20000);
+    return fetch(url, ac ? { signal: ac.signal, referrerPolicy: 'no-referrer' } : undefined).then(function (r) { clearTimeout(tmo); return r.json(); }, function (e) { clearTimeout(tmo); e.net = true; throw e; }).then(function (r) {
+      if (!r.ok) { var er = new Error(r.error || 'server'); if (r.error === 'busy') er.busy = true; throw er; }   // коротке слово (auth/forbidden/busy) або речення для людини
       return r.data;
     }, function (e) { if (e && e.name === 'SyntaxError') e.net = true; throw e; });   // не JSON (збій Google) = теж «нема звʼязку»
   }
@@ -197,7 +251,16 @@
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function nowKyiv() { try { return new Date().toLocaleString('sv-SE', { timeZone: 'Europe/Kiev' }).slice(0, 16).replace(' ', 'T'); } catch (e) { return new Date().toISOString().slice(0, 16); } }
   function rid() { return (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)).slice(0, 24); }
+  // кеш у телефоні належить одній людині: якщо застосунок відкрив інший користувач — чужі дані стираємо
+  var UID = KEY ? KEY.split('.')[0] : (tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? 'tg' + tg.initDataUnsafe.user.id : '');
   var QKEY = 'hl_q_' + (KEY ? KEY.split('.')[0] : 'tg');
+  try {
+    if (UID && !DEMO) {
+      var prevUid = localStorage.getItem('hl_uid');
+      if (prevUid && prevUid !== UID) Object.keys(localStorage).forEach(function (k) { if (k.indexOf('hl_') === 0) localStorage.removeItem(k); });
+      localStorage.setItem('hl_uid', UID);
+    }
+  } catch (e) {}
   var Q = lsGet(QKEY) || [];
   function saveQ() { lsSet(QKEY, Q); drawBar(); }
   function drawBar() {
@@ -214,7 +277,7 @@
   function apiW(action, p) {
     p.at = nowKyiv(); p.qid = rid();
     return api(action, p).catch(function (e) {
-      if (!e || !e.net) throw e;
+      if (!e || !(e.net || e.busy)) throw e;   // нема звʼязку або сервер зайнятий — у чергу, відправиться само
       var b = S.data && S.data.businesses.filter(function (x) { return x.id === p.id; })[0];
       Q.push({ qid: p.qid, action: action, p: p, name: b ? b.name : '' }); saveQ();
       var nb = b ? JSON.parse(JSON.stringify(b)) : null;
@@ -238,6 +301,7 @@
       return api(it.action, it.p).then(function () { Q = Q.filter(function (x) { return x.qid !== it.qid; }); saveQ(); return next(); },
         function (e) {
           if (e && e.net) { S.offline = true; return; }   // звʼязку ще нема — спробуємо пізніше
+          if (e && (e.busy || e.message === 'server')) return;   // сервер зайнятий / тимчасовий збій — дію не викидаємо, повторимо за хвилину
           it.err = String(e && e.message || 'помилка'); if (it.err.length < 4) it.err = errText(e); saveQ(); return next();
         });
     }
@@ -245,46 +309,67 @@
   }
   function cacheList() { if (S.data && S.agent) lsSet('hl_list_' + S.agent, S.data); }
   window.addEventListener('online', function () { S.offline = false; var had = Q.length; flushQ().then(function () { if (!had && S.me && S.agent) load(true); }); });
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && Q.length) flushQ(); });
+  // повернулись у застосунок: відправити чергу, а якщо дані старші за хвилину — тихо оновити (прострочки, лічильники)
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) return;
+    if (Q.length) flushQ();
+    else if (S.me && S.agent && S.data && Date.now() - (S.loadedAt || 0) > 60000 && !$('#detail').classList.contains('show') && S.tab !== 'admin') load(true);
+  });
   setInterval(function () { if (Q.length && !document.hidden) flushQ(); }, 60000);
   function errText(e) {
     var m = String(e && e.message || e);
     if (m === 'auth') return 'Відкрий застосунок через бота (кнопка «📱 Хед-лист»).';
     if (m === 'not_agent') return 'Тебе немає в списку агентів. Напиши менеджеру.';
     if (m === 'forbidden') return 'Немає доступу.';
-    return 'Нема звʼязку. Перевір інтернет і спробуй ще раз.';
+    if (m === 'busy') return 'Бот зараз зайнятий. Спробуй ще раз за хвилину.';
+    if (e && e.net) return 'Нема звʼязку. Перевір інтернет і спробуй ще раз.';
+    return 'Щось пішло не так на сервері. Спробуй ще раз за хвилину.';
   }
 
   // ── завантаження ──
+  function applyMe(me) {
+    S.me = me;
+    var others = me.agents.filter(function (a) { return a.username !== me.me.username; });
+    if (!S.agent || !me.agents.some(function (a) { return a.username === S.agent; })) S.agent = me.me.role === 'agent' ? me.me.username : (others[0] || me.me).username;
+    $('#who').textContent = me.me.role === 'agent' ? me.me.name : 'Команда';
+    if (me.me.role !== 'agent' && me.agents.length) {
+      var sel = $('#agentSel');
+      sel.innerHTML = me.agents.filter(function (a) { return a.username !== me.me.username || me.agents.length === 1; })
+        .map(function (a) { return '<option value="' + esc(a.username) + '">' + esc(a.name) + (a.level === 'edit' ? ' · редаг.' : ' · перегляд') + '</option>'; }).join('');
+      sel.value = S.agent; sel.style.display = '';
+      sel.onchange = function () { S.agent = sel.value; S.day = ''; S.data = lsGet('hl_list_' + S.agent); if (S.data) render(); load(!!S.data); };
+    }
+    if (me.me.admin) $('#tabAdmin').style.display = '';
+    if (!me.agents.length) { S.tab = 'admin'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === 'admin'); }); }
+    drawBar();
+  }
+  // спершу показуємо збережене в телефоні (миттєво), потім тихо оновлюємо з сервера
   function boot() {
-    api('me').catch(function (e) { var c = e && e.net && lsGet('hl_me'); if (c) { S.offline = true; return c; } throw e; }).then(function (me) {
-      if (!S.offline) lsSet('hl_me', me);
-      S.me = me; S.agent = me.me.role === 'agent' ? me.me.username : (me.agents.filter(function (a) { return a.username !== me.me.username; })[0] || me.me).username;
-      $('#who').textContent = me.me.role === 'agent' ? me.me.name : 'Команда';
-      if (me.me.role !== 'agent' && me.agents.length) {
-        var sel = $('#agentSel');
-        sel.innerHTML = me.agents.filter(function (a) { return a.username !== me.me.username || me.agents.length === 1; })
-          .map(function (a) { return '<option value="' + esc(a.username) + '">' + esc(a.name) + (a.level === 'edit' ? ' ✏️' : ' 👁') + '</option>'; }).join('');
-        sel.value = S.agent; sel.style.display = '';
-        sel.onchange = function () { S.agent = sel.value; S.day = ''; load(); };
-      }
-      if (me.me.admin) $('#tabAdmin').style.display = '';
-      if (!me.agents.length) { S.tab = 'admin'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === 'admin'); }); }
-      drawBar();
-      if (me.agents.length) load(); else if (me.me.admin) render(); else $('#main').innerHTML = '<div class="empty">Доступу до даних агентів поки немає. Його видає власник.</div>';
-    }).catch(function (e) { $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+    var cm = DEMO ? null : lsGet('hl_me'), shown = false;
+    if (cm && cm.me && cm.agents) {
+      try { applyMe(cm); var cl = lsGet('hl_list_' + S.agent); if (cl && cl.businesses) { S.data = cl; render(); shown = true; } } catch (e) { shown = false; }
+    }
+    api('me').then(function (me) {
+      lsSet('hl_me', me); applyMe(me);
+      if (me.agents.length) load(shown); else if (me.me.admin) render(); else $('#main').innerHTML = '<div class="empty">Доступу до даних агентів поки немає. Його видає власник.</div>';
+    }).catch(function (e) {
+      if (cm && e && e.net) { S.offline = true; drawBar(); if (!shown && cm.agents.length) load(); return; }
+      if (e && (e.message === 'auth' || e.message === 'not_agent')) { try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('hl_') === 0 && k.indexOf('hl_q_') !== 0) localStorage.removeItem(k); }); } catch (x) {} S.data = null; }
+      $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>';
+    });
   }
   function load(quiet) {
     if (!quiet || !S.data) $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
     api('list', { agent: S.agent }).then(function (data) {
-      S.offline = false; S.data = data; BIZ = {};
+      S.offline = false; S.data = data; S.loadedAt = Date.now(); BIZ = {};
       // ще не відправлені дії лишаємо видимими
       Q.forEach(function (it) { var b = data.businesses.filter(function (x) { return x.id === it.p.id; })[0]; if (b && !it.err) { if (it.action === 'status') b.status = it.p.status; b.queued = true; } });
-      cacheList(); drawBar(); render(); prefetch(data.businesses.filter(function (b) { return isOpenSt(b.status) || b.next_kind === 'payment'; }));
+      cacheList(); drawBar(); if (!$('#detail').classList.contains('show') || !quiet) render(); else S.stale = true; prefetch(data.businesses.filter(function (b) { return isOpenSt(b.status) || b.next_kind === 'payment'; }));
       if (Q.length) flushQ();
     }).catch(function (e) {
       var c = e && e.net && lsGet('hl_list_' + S.agent);
       if (c) { S.offline = true; S.data = c; BIZ = {}; drawBar(); render(); return; }
+      if (quiet && S.data) return;   // тихе оновлення не вдалося — лишаємо те, що вже на екрані
       $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>';
     });
   }
@@ -294,9 +379,9 @@
     var x = S.data, n = x.norms, td = x.today, wk = x.week;
     var late = x.now.slice(11, 16) >= '17:00';
     function st(label, v, norm, alarm) { return '<span class="stat' + (late && v <= alarm ? ' bad' : '') + '">' + label + ' <b>' + v + '</b>/' + norm + '</span>'; }
-    $('#stats').innerHTML = st('🚪', td.doors, n.doors, n.doorsAlarm) + st('🤝 ЛПР', td.lpr, n.lpr, n.lprAlarm) +
+    $('#stats').innerHTML = st('🚪 Двері', td.doors, n.doors, n.doorsAlarm) + st('🤝 ЛПР', td.lpr, n.lpr, n.lprAlarm) +
       '<span class="stat">⏱ ≥' + n.qualityMin + ' хв <b>' + td.quality + '</b></span>' +
-      '<span class="stat">тиждень ЛПР <b>' + wk.lpr + '</b>/' + n.weekLpr + '</span>';
+      '<span class="stat">тижд. ЛПР <b>' + wk.lpr + '</b>/' + n.weekLpr + '</span>';
   }
 
   function row(b, timeCol) {
@@ -307,14 +392,17 @@
         (dd && dd !== today ? '<small>' + wd(dd) + ' ' + dm(dd) + '</small>' : '') + '</div>';
     }
     var sub = [];
+    if (!timeCol) sub.push('<b class="stx t-' + cls(b.status) + '">' + esc(ST[b.status || ''] || '') + '</b>');   // статус словом, не лише кольором
     if (b.lpr_name) sub.push(esc(b.lpr_name));
-    if (b.lpr_phone) sub.push('<a href="tel:+' + esc(b.lpr_phone) + '" onclick="return callNum(event,\'' + esc(b.id) + '\',\'' + esc(b.lpr_phone) + '\')">' + esc(phoneFmt(b.lpr_phone)) + '</a>');
+    if (b.lpr_phone) sub.push(esc(phoneFmt(b.lpr_phone)));
     if (!timeCol && b.next_dt && (isOpenSt(b.status) || b.next_kind === 'payment')) sub.push((b.overdue ? '⏰ ' : '↪ ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt));
     if (b.next_kind === 'meeting' && timeCol) sub.push('зустріч');
     if (b.next_kind === 'payment' && timeCol) sub.push('💰 дзвінок щодо оплати');
-    return '<div class="item" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + (b.status || 'none') + '"></span><div class="body">' +
-      '<div class="name">' + esc(b.name) + '</div>' + (sub.length ? '<div class="sub">' + sub.join(' · ') + '</div>' : '') +
-      (b.last_comment ? '<div class="note">' + esc(b.last_comment) + '</div>' : '') + '</div></div>';
+    if (b.queued) sub.push('<i class="qd">⏳ чекає відправки</i>');
+    return '<div class="item" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + cls(b.status) + '"></span><div class="body">' +
+      '<div class="name">' + esc(b.name) + '</div>' + (sub.length ? '<div class="sub">' + sub.map(function (x) { return '<span>' + x + '</span>'; }).join(' ') + '</div>' : '') +
+      (b.last_comment ? '<div class="note">' + esc(b.last_comment) + '</div>' : '') + '</div>' +
+      (b.lpr_phone ? '<a class="rcall" href="tel:+' + esc(digits(b.lpr_phone)) + '" data-call="' + esc(digits(b.lpr_phone)) + '" data-bid="' + esc(b.id) + '" aria-label="Подзвонити">📞</a>' : '') + '</div>';
   }
   function mixOf(list) {
     var n = {}; list.forEach(function (b) { n[b.status] = (n[b.status] || 0) + 1; });
@@ -338,11 +426,20 @@
     if (S.tab === 'tasks') html += tasksView(); else html += allView();
     $('#main').innerHTML = html;
     var inp = $('#q');
-    if (inp) { inp.value = S.q; inp.oninput = function () { S.q = inp.value; $('#allList').innerHTML = allList(); bindRows(); }; }
-    document.querySelectorAll('.chip').forEach(function (c) { c.onclick = function () { S.filter = c.dataset.f; haptic(); render(); }; });
-    bindRows();
+    var tq;
+    if (inp) { inp.value = S.q; inp.oninput = function () { S.q = inp.value; clearTimeout(tq); tq = setTimeout(function () { var l = $('#allList'); if (l) { l.innerHTML = allList(); bindReset(); } }, 120); }; }
+    // фільтр: міняємо лише список — рядок фільтрів не «відстрибує» на початок
+    document.querySelectorAll('.chip').forEach(function (c) { c.onclick = function () { S.filter = c.dataset.f; haptic(); document.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('on', x === c); }); $('#allList').innerHTML = allList(); bindReset(); }; });
+    bindReset();
   }
-  function bindRows() { document.querySelectorAll('.item').forEach(function (el) { el.onclick = function () { openBiz(el.dataset.id); }; }); }
+  function bindReset() { var r = $('#fReset'); if (r) r.onclick = function () { S.q = ''; S.filter = ''; render(); }; }
+  // один обробник на весь список (а не на кожен рядок)
+  $('#main').addEventListener('click', function (ev) {
+    var c = ev.target.closest ? ev.target.closest('.rcall') : null;
+    if (c) return window.callNum(ev, c.dataset.bid, c.dataset.call);
+    var it = ev.target.closest ? ev.target.closest('.item[data-id]') : null;
+    if (it && !ev.target.closest('a,button')) openBiz(it.dataset.id);
+  });
 
   function tasksView() {
     var x = S.data, today = d(x.now), tomorrow = addDays(today, 1);
@@ -355,32 +452,34 @@
       if (b.retry && dd <= today) rt.push(b);   // автоповтор після «нбт» — окремо, не як прострочене
       else if (dd < today) over.push(b); else if (dd === today) td.push(b); else if (dd === tomorrow) tm.push(b); else later.push(b);
     });
-    var h = group('⏰ Прострочено', over, 'over', true) + group('Сьогодні', td, '', true) + group('🔁 Повтори після «нбт»', rt, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true) + group('⚠️ Без дати', nodate, 'over', true);
+    var h = group('⏰ Прострочено', over, 'over', true) + group('⚠️ Без дати', nodate, 'over', true) + group('Сьогодні', td, '', true) + group('🔁 Повтори після «нбт»', rt, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true);
     return h || '<div class="empty">Наработок немає. Час на нові двері 🚪</div>';
   }
   function allView() {
-    var c = function (f, l) { return '<button class="chip' + (S.filter === f ? ' on' : '') + '" data-f="' + f + '">' + l + '</button>'; };
-    return '<div class="search"><input id="q" type="search" placeholder="Пошук: назва, ЛПР, телефон"></div>' +
+    var cnt = { '': S.data.businesses.length }; S.data.businesses.forEach(function (b) { cnt[b.status] = (cnt[b.status] || 0) + 1; });
+    var c = function (f, l) { return '<button class="chip' + (S.filter === f ? ' on' : '') + '" data-f="' + f + '">' + l + ' <small>' + (cnt[f] || 0) + '</small></button>'; };
+    return '<div class="search"><input id="q" type="search" enterkeyhint="search" autocomplete="off" placeholder="Пошук: назва, ЛПР, телефон"></div>' +
       '<div class="chips">' + c('', 'Усі') + c('yellow', '🟡 Думає') + c('blue', '🔵 Зустріч') + c('white', '⚪ Вийти на ЛПР') + c('green', '🟢 Договір') + c('red', '🔴 Відпрац.') + '</div>' +
       '<div class="group"><div class="list" id="allList">' + allList() + '</div></div>';
   }
   function allList() {
-    var q = S.q.toLowerCase().trim(), qd = q.replace(/\D/g, '');
+    var norm = function (v) { return String(v || '').toLowerCase().replace(/[ʼ'’`´"«»]/g, ''); };   // «кавʼярня» = «кав'ярня» = «кав’ярня»
+    var q = norm(S.q).trim(), qd = q.replace(/\D/g, '');
     var l = S.data.businesses.filter(function (b) {
       if (S.filter && b.status !== S.filter) return false;
       if (!q) return true;
-      return (b.name + ' ' + b.lpr_name).toLowerCase().indexOf(q) >= 0 || (qd.length >= 3 && String(b.lpr_phone).indexOf(qd) >= 0);
+      return norm(b.name + ' ' + b.lpr_name).indexOf(q) >= 0 || (qd.length >= 3 && String(b.lpr_phone).indexOf(qd) >= 0);
     });
-    return l.length ? l.map(function (b) { return row(b, false); }).join('') : '<div class="empty">Нічого не знайдено</div>';
+    return l.length ? l.map(function (b) { return row(b, false); }).join('') : '<div class="empty">Нічого не знайдено' + (S.filter || S.q ? '<br><button class="reset" id="fReset">Скинути пошук і фільтр</button>' : '') + '</div>';
   }
 
   // ── полотно дня: що агент робив за день, по порядку часу ──
   var DAYC = {};
   function loadDay() {
     var x = S.data, date = S.day || d(x.now), key = S.agent + ':' + date;
-    if (DAYC[key]) drawDay(DAYC[key]);
+    if (DAYC[key]) { drawDay(DAYC[key]); if (Date.now() - (DAYC[key]._t || 0) < 45000) return; }   // щойно завантажений день не тягнемо вдруге
     api('day', { agent: S.agent, date: date }).then(function (r) {
-      DAYC[key] = r; if (date === d(x.now)) lsSet('hl_day_' + S.agent, r);
+      r._t = Date.now(); DAYC[key] = r; if (date === d(x.now)) lsSet('hl_day_' + S.agent, r);
       if (S.tab === 'day' && (S.day || d(S.data.now)) === date) drawDay(r);
     }).catch(function (e) {
       var c = e && e.net && lsGet('hl_day_' + S.agent);
@@ -437,7 +536,7 @@
     if (e.by) meta.push('від @' + e.by);
     var txt = e.comment || e.notes;
     return '<div class="drow" data-id="' + esc(e.business_id) + '"><div class="tm">' + tm + '</div><div class="bd">' +
-      '<div class="nm"><span class="dot s-' + (e.status_after || 'none') + '" style="display:inline-block;margin:0 6px 1px 0;vertical-align:middle"></span>' + esc(e.name || '—') + '</div>' +
+      '<div class="nm"><span class="dot s-' + cls(e.status_after) + '" style="display:inline-block;margin:0 6px 1px 0;vertical-align:middle"></span>' + esc(e.name || '—') + '</div>' +
       '<div class="mt">' + meta.filter(Boolean).map(esc).join(' · ') + '</div>' + (txt ? '<div class="cm">' + esc(txt) + '</div>' : '') + '</div></div>';
   }
 
@@ -449,7 +548,8 @@
     haptic();
     var el = $('#detail'), opened = el.classList.contains('show') && el.dataset.id === id;
     el.dataset.id = id; el.classList.add('show'); if (!keepScroll && !opened) el.scrollTop = 0;
-    if (tg && tg.BackButton) { tg.BackButton.show(); tg.BackButton.onClick(closeBiz); }
+    document.body.classList.add('lock');
+    if (tg && tg.BackButton) tg.BackButton.show();
     var cached = BIZ[id], fromList = S.data && S.data.businesses.filter(function (x) { return x.id === id; })[0];
     if (cached) renderBiz(cached);
     else if (fromList) renderBiz({ business: fromList, events: null, editable: S.data.editable });
@@ -476,37 +576,57 @@
     var ids = list.filter(function (b) { return !BIZ[b.id]; }).slice(0, 8).map(function (b) { return b.id; });
     (function next() { var id = ids.shift(); if (!id) return; api('biz', { id: id }).then(function (r) { BIZ[id] = r; }).catch(function () {}).then(next); })();
   }
-  function closeBiz() {
-    $('#detail').classList.remove('show');
-    if (tg && tg.BackButton) { tg.BackButton.hide(); tg.BackButton.offClick(closeBiz); }
+  function closeBiz(force) {
+    if (force !== true && dirty()) {
+      var go = function (ok) { if (ok) closeBiz(true); };
+      if (tg && tg.showConfirm) { try { tg.showConfirm('Нотатку не збережено. Закрити без збереження?', go); return; } catch (e) {} }
+      return go(confirm('Нотатку не збережено. Закрити без збереження?'));
+    }
+    $('#detail').classList.remove('show'); $('#detail').innerHTML = '';
+    document.body.classList.remove('lock');
+    if (tg && tg.BackButton) tg.BackButton.hide();
+    syncDirty();
+    if (S.stale) { S.stale = false; if (S.data && S.tab !== 'admin') render(); }
   }
+  // кнопка «назад» Telegram / Android: один обробник на весь застосунок
+  try {
+    if (tg && tg.BackButton) tg.BackButton.onClick(function () {
+      if ($('#detail').classList.contains('show')) return closeBiz();
+      if (S.tab === 'admin' && (A.form || A.person)) { A.form = null; A.person = null; drawAdmin(); tg.BackButton.hide(); return; }
+      if (S.tab === 'day' && S.day) { S.day = ''; loadDay(); tg.BackButton.hide(); return; }
+      tg.BackButton.hide();
+    });
+  } catch (e) {}
   function renderBiz(r) {
     var b = r.business, ed = r.editable, el = $('#detail');
     var next = '';
     if (b.next_dt && (isOpenSt(b.status) || b.next_kind === 'payment')) next = '<div class="next' + (b.overdue ? ' over' : '') + '">' + (b.overdue ? '⏰ Прострочено: ' : '↪ ') +
       (b.next_kind === 'meeting' ? 'зустріч ' : b.next_kind === 'payment' ? '💰 дзвінок щодо оплати ' : b.next_kind === 'retry' ? '🔁 повторний дзвінок після «нбт» ' : b.status === 'yellow' ? 'передзвон «думає» ' : 'вийти на ЛПР ') + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) + (b.deferred ? ' · відкладено: ' + esc(b.deferred) : '') + '</div>';
-    var phone = b.lpr_phone ? '<a class="callbtn" href="tel:+' + esc(b.lpr_phone) + '" onclick="return callNum(event,\'' + esc(b.id) + '\',\'' + esc(b.lpr_phone) + '\')">📞 Дзвонити</a>' : '';
+    var phone = b.lpr_phone ? '<a class="callbtn" id="callBtn" href="tel:+' + esc(digits(b.lpr_phone)) + '">📞 Дзвонити</a>' : '';
     var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>' + esc(b.name) + '</h1>' +
-      '<span class="pill"><span class="dot s-' + (b.status || 'none') + '" style="margin:0"></span>' + ST[b.status || ''] + (b.status === 'red' ? (b.red_kind === 'exhausted' ? ' · пробити неможливо' : b.red_kind === 'closed' ? ' · бізнес закрився' : b.red_kind === 'meeting' ? ' · відмова від зустрічі (тел.)' : ' · відмова ЛПР') : '') + '</span>' + next + '</div>';
+      '<span class="pill"><span class="dot s-' + cls(b.status) + '" style="margin:0"></span>' + esc(ST[b.status || ''] || '') + (b.status === 'red' ? (b.red_kind === 'exhausted' ? ' · пробити неможливо' : b.red_kind === 'closed' ? ' · бізнес закрився' : b.red_kind === 'meeting' ? ' · відмова від зустрічі (тел.)' : ' · відмова ЛПР') : '') + '</span>' + next +
+      (b.queued ? '<div class="msg" style="margin:8px 0 0">⏳ Є невідправлені зміни — підуть самі, коли зʼявиться звʼязок.</div>' : '') + '</div>';
     h += '<div class="sec"><h2>Контакт</h2><div class="card">' +
-      '<div class="field"><label>Назва</label><input id="fName" value="' + esc(b.name) + '"' + (ed ? '' : ' disabled') + '></div>' +
-      '<div class="field"><label>ЛПР</label><input id="fLpr" value="' + esc(b.lpr_name) + '" placeholder="імʼя"' + (ed ? '' : ' disabled') + '></div>' +
-      '<div class="field"><label>Телефон</label><input id="fPhone" inputmode="tel" value="' + esc(b.lpr_phone) + '" placeholder="380…"' + (ed ? '' : ' disabled') + '>' + phone + '</div>' +
+      '<div class="field"><label>Назва</label><input id="fName" enterkeyhint="done" autocomplete="off" value="' + esc(b.name) + '"' + (ed ? '' : ' disabled') + '></div>' +
+      '<div class="field"><label>ЛПР</label><input id="fLpr" enterkeyhint="done" autocomplete="off" value="' + esc(b.lpr_name) + '" placeholder="імʼя"' + (ed ? '' : ' disabled') + '></div>' +
+      '<div class="field"><label>Телефон</label><input id="fPhone" type="tel" inputmode="tel" enterkeyhint="done" autocomplete="off" value="' + esc(b.lpr_phone) + '" placeholder="380…"' + (ed ? '' : ' disabled') + '>' + phone + '</div>' +
       '</div></div>';
     if (!ed) h += '<div class="msg">👁 Лише перегляд.</div>';
     if (ed) h += '<div class="sec"><h2>Нотатка</h2><div class="card"><textarea id="fNote" maxlength="800" placeholder="Що нового? Напр.: подзвонив, ЛПР просив набрати в пʼятницю"></textarea></div></div>' +
       '<button class="save" id="saveBtn">Зберегти</button><div class="msg" id="msg"></div>' +
       (b.status === 'green' ? '' : '<div class="sec"><h2>' + (isOpenSt(b.status) ? 'Перенести або змінити статус' : 'Змінити статус') + '</h2><div class="card"><div class="seg" id="stSeg">' +
-        (isOpenSt(b.status) ? '<button data-s="' + b.status + '" data-move="1">🗓 Перенести</button>' : '') + [['yellow', '🟡 Думає'], ['blue', '🔵 Зустріч'], ['white', '⚪ Вийти на ЛПР'], ['red', '🔴 Відпрац.']].map(function (x) { return '<button data-s="' + x[0] + '">' + x[1] + '</button>'; }).join('') +
+        (isOpenSt(b.status) ? '<button data-s="' + cls(b.status) + '" data-move="1">🗓 Перенести</button>' : '') + [['yellow', '🟡 Думає'], ['blue', '🔵 Зустріч'], ['white', '⚪ Вийти на ЛПР'], ['red', '🔴 Відпрац.']].map(function (x) { return '<button data-s="' + x[0] + '">' + x[1] + '</button>'; }).join('') +
         '</div><div id="stForm" style="display:none">' +
         '<textarea id="stWhy" maxlength="800" placeholder="Що зʼясували і чому змінюєш статус"></textarea>' +
-        '<div class="field" id="stWhenF"><label>Коли</label><input id="stWhen" placeholder="напр. завтра 11:00 або пт 15:30"></div>' +
+        '<div class="field" id="stWhenF"><label>Коли</label><input id="stWhen" enterkeyhint="done" autocomplete="off" placeholder="напр. завтра 11:00 або пт 15:30"></div>' +
         '<div class="field" id="stFarF" style="display:none"><label>Причина</label><input id="stFar" placeholder="чому не раніше ніж за 2 робочі дні"></div>' +
         '</div></div><button class="save" id="stBtn" style="display:none">Змінити статус</button><div class="msg" id="stMsg"></div></div>');
     h += '<div class="sec"><h2>Історія</h2><div class="card" id="hist">' + histHtml(r.events) + '</div></div><div style="height:24px"></div>';
     el.innerHTML = h;
-    $('#bk').onclick = closeBiz;
+    $('#bk').onclick = function () { closeBiz(); };
+    var cb = $('#callBtn'); if (cb) cb.onclick = function (ev) { return window.callNum(ev, b.id, b.lpr_phone); };
     if (ed) $('#saveBtn').onclick = function () { save(b); };
+    syncDirty();
     if (ed && $('#stSeg')) {
       var pick = '';
       document.querySelectorAll('#stSeg button').forEach(function (bt) {
@@ -515,9 +635,11 @@
           document.querySelectorAll('#stSeg button').forEach(function (x) { x.classList.toggle('on', x === bt); });
           $('#stForm').style.display = ''; $('#stBtn').style.display = '';
           $('#stWhenF').style.display = pick === 'red' ? 'none' : '';
+          if (!$('#stWhy').value && $('#fNote') && $('#fNote').value.trim()) { $('#stWhy').value = $('#fNote').value; $('#fNote').value = ''; }   // уже набрану нотатку не пишемо вдруге
           $('#stWhy').placeholder = pick === 'red' ? 'Чому відпрацьовано: що сказав власник' : bt.dataset.move ? 'Чому переносимо: що сказав ЛПР' : 'Що зʼясували і що робитимеш далі';
           $('#stBtn').textContent = bt.dataset.move ? 'Перенести' : 'Змінити статус';
           $('#stMsg').textContent = ''; $('#stMsg').className = 'msg';
+          setTimeout(function () { try { $('#stBtn').scrollIntoView({ block: 'end', behavior: 'smooth' }); } catch (e) {} }, 30);   // форма зʼявляється нижче екрана — підкручуємо до неї
         };
       });
       $('#stBtn').onclick = function () { setStatus(b, pick); };
@@ -526,32 +648,33 @@
   function evRow(e) {
     var head = [ (KIND[e.kind] || '•') + ' ' + dm(e.date) + (e.start ? ' ' + t(e.start) : '') ];
     if (e.kind === 'visit') { head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін'); if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') head.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt)); }
-    if (e.kind === 'status') head.push(e.status_before === e.status_after ? '🗓 перенесено' + (e.next_dt ? ' на ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '') : 'статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + ST[e.status_after || '']);
+    if (e.kind === 'status') head.push(e.status_before === e.status_after ? '🗓 перенесено' + (e.next_dt ? ' на ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '') : 'статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + (ST[e.status_after || ''] || '—'));
     if (e.result === 'nbt') head.push('НБТ');
     if (e.door) head.push('двері');
     var txt = e.comment ? '<div class="evt">' + esc(e.comment) + '</div>' : '';
     if (e.by) head.push('від @' + e.by);
     var nt = e.notes ? '<div class="evn">📝 ' + esc(e.notes) + '</div>' : '';
     var fl = e.flags ? '<div class="evn">⚠️ ' + esc(e.flags) + '</div>' : '';
-    return '<div class="ev"><div class="evh"><span class="dot s-' + (e.status_after || 'none') + '"></span>' + head.join(' · ') + '</div>' + txt + nt + fl + '</div>';
+    return '<div class="ev"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span>' + head.map(esc).join(' · ') + '</div>' + txt + nt + fl + '</div>';
   }
   function setStatus(b, to) {
     var p = { id: b.id, status: to, note: $('#stWhy').value, when: $('#stWhen').value, far: $('#stFar').value };
     var btn = $('#stBtn'), msg = $('#stMsg');
-    btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Зберігаю…';
+    var lbl = btn.textContent; btn.disabled = true; btn.textContent = 'Зберігаю…'; msg.className = 'msg'; msg.textContent = '';
     apiW('status', p).then(function (r) {
-      btn.disabled = false;
+      btn.disabled = false; btn.textContent = lbl;
       if (r && r.ok === false) {
-        msg.className = 'msg err'; msg.textContent = r.error;
+        hn('error'); msg.className = 'msg err'; msg.textContent = r.error;
         if (r.far) { $('#stFarF').style.display = ''; $('#stFar').focus(); }
         return;
       }
-      haptic('medium');
+      hn('success');
       var i = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
       if (i >= 0 && r.business) S.data.businesses[i] = r.business;
-      delete BIZ[b.id]; openBiz(b.id); render();
+      $('#stWhy').value = ''; if ($('#fNote')) $('#fNote').value = '';
+      delete BIZ[b.id]; openBiz(b.id); S.stale = true; cacheList();
     }).catch(function (e) {
-      btn.disabled = false; msg.className = 'msg err';
+      hn('error'); btn.disabled = false; btn.textContent = lbl; msg.className = 'msg err';
       var m = String(e && e.message || '');
       msg.textContent = m.length > 15 ? m : errText(e);
       if (/робоч/.test(m)) { $('#stFarF').style.display = ''; }
@@ -560,14 +683,14 @@
   function save(b) {
     var p = { id: b.id, name: $('#fName').value, lpr_name: $('#fLpr').value, lpr_phone: $('#fPhone').value.replace(/\s/g, ''), note: $('#fNote').value };
     var btn = $('#saveBtn'), msg = $('#msg');
-    btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Зберігаю…';
+    btn.disabled = true; btn.textContent = 'Зберігаю…'; msg.className = 'msg'; msg.textContent = '';
     apiW('update', p).then(function (r) {
-      haptic('medium');
+      hn('success'); btn.textContent = 'Зберегти';
       msg.textContent = r.queued ? '📴 Нема звʼязку — збережено в телефоні, відправиться само.' : r.changed && r.changed.length ? '✅ Збережено: ' + r.changed.join(', ') : 'Нічого не змінилось';
       btn.disabled = false;
       var i = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
       if (i >= 0 && r.business) S.data.businesses[i] = r.business;
-      render();
+      S.stale = true; cacheList();
       if (r.suggest) {
         msg.innerHTML = '✅ Нотатку збережено. Перенести ' + (b.next_kind === 'meeting' ? 'зустріч' : 'наступний крок') + ' на <b>' + esc(r.suggest.label) + '</b>?' +
           '<button class="save" id="sugBtn" style="width:100%;margin:8px 0 0">🗓 Так, перенести на ' + esc(r.suggest.label) + '</button>';
@@ -578,7 +701,7 @@
             haptic('medium');
             var j = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
             if (j >= 0 && r2.business) S.data.businesses[j] = r2.business;
-            delete BIZ[b.id]; openBiz(b.id); render();
+            delete BIZ[b.id]; openBiz(b.id); S.stale = true; cacheList();
           }).catch(function (e) { msg.className = 'msg err'; msg.textContent = String(e && e.message || '').length > 15 ? e.message : errText(e); });
         };
       } else if (r.snooze && r.snooze.length) {
@@ -593,15 +716,20 @@
               haptic('medium');
               var j = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
               if (j >= 0 && r2.business) S.data.businesses[j] = r2.business;
-              delete BIZ[b.id]; openBiz(b.id, true); render();
+              delete BIZ[b.id]; openBiz(b.id, true); S.stale = true; cacheList();
             }).catch(function (e2) { msg.className = 'msg err'; msg.textContent = String(e2 && e2.message || '').length > 15 ? e2.message : errText(e2); });
           };
         });
         $('#snzNo').onclick = function () { delete BIZ[b.id]; openBiz(b.id, true); };
-      } else if (p.note) { delete BIZ[b.id]; openBiz(b.id, true); }
+      } else if (p.note) {
+        // картка перемальовується — повідомлення «Збережено» лишаємо на екрані
+        var keep = msg.textContent; $('#fNote').value = '';
+        if (r.queued) { var hb = $('#hist'); if (hb) hb.insertAdjacentHTML('afterbegin', '<div class="ev"><div class="evh">📝 щойно · ⏳ чекає відправки</div><div class="evt">' + esc(p.note) + '</div></div>'); syncDirty(); }
+        else { delete BIZ[b.id]; openBiz(b.id, true); var m2 = $('#msg'); if (m2) m2.textContent = keep; }
+      }
     }).catch(function (e) {
-      btn.disabled = false; msg.className = 'msg err';
-      msg.textContent = /Телефон/.test(e.message) ? e.message : errText(e);
+      hn('error'); btn.disabled = false; btn.textContent = 'Зберегти'; msg.className = 'msg err';
+      msg.textContent = String(e && e.message || '').length > 15 ? e.message : errText(e);
     });
   }
 
@@ -669,6 +797,7 @@
       (r.owner ? '<div class="field"><label>Керівник (менеджер)</label><select id="pLead">' + opt('', '— без керівника —', p.lead || '') +
         (r.managers || []).map(function (m) { return opt(m.username, m.name, p.lead || ''); }).join('') + '</select></div>' : '') +
       (p.isNew ? '' : '<div class="seg" id="pAct"><button data-v="1" class="' + (p.active ? 'on' : '') + '">✅ Активний</button><button data-v="0" class="' + (!p.active ? 'on' : '') + '">🔒 Вимкнути</button></div>') +
+      (p.isNew ? '' : '<button class="addbtn" style="width:100%;margin:4px 0 0" id="pReset">🔄 Скинути привʼязку Telegram (людина змінила акаунт)</button>') +
       '<button class="save" id="pSave">' + (p.isNew ? 'Додати' : 'Зберегти') + '</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="pCancel">Скасувати</button>' +
       '<div class="msg" id="pMsg">' + (p.isNew ? (r.owner ? 'Після додавання людина пише боту /start. Менеджер-керівник бачить своїх агентів одразу; решті — через «Видати доступ».' : 'Людина закріпиться за тобою: її хед-лист бачиш лише ти і власник. Після додавання вона пише боту /start.') : '') + '</div></div>';
   }
@@ -689,6 +818,15 @@
     if (A.person) {
       seg('#pAct', function (v) { A.person.active = v === '1'; });
       $('#pCancel').onclick = function () { A.person = null; drawAdmin(); };
+      if ($('#pReset')) $('#pReset').onclick = function () {
+        var p = A.person, go = function (ok) {
+          if (!ok) return;
+          api('person', { username: p.username, role: p.role, active: p.active !== false, reset_tg: true }).then(function (r) { if (r && r.ok === false) throw new Error(r.error); hn('success'); A.person = null; renderAdmin(); })
+            .catch(function (e) { $('#pMsg').className = 'msg err'; $('#pMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
+        };
+        var q = 'Скинути привʼязку? Після цього людина має ще раз написати боту /start зі свого акаунта.';
+        if (tg && tg.showConfirm) tg.showConfirm(q, go); else go(confirm(q));
+      };
       $('#pSave').onclick = function () {
         var p = A.person, b = this;
         var body = { username: p.isNew ? $('#pUser').value : p.username, name: $('#pName').value, role: $('#pRole').value, office: $('#pOffice').value, active: p.active !== false };
@@ -707,7 +845,7 @@
   document.querySelectorAll('.tab').forEach(function (tb) {
     tb.onclick = function () {
       document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === tb); });
-      S.tab = tb.dataset.tab; haptic(); if (S.data || S.tab === 'admin') render();
+      S.tab = tb.dataset.tab; haptic(); window.scrollTo(0, 0); if (S.data || S.tab === 'admin') render();
     };
   });
 
