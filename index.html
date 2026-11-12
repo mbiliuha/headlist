@@ -152,7 +152,14 @@
   .lrow b { color: var(--text); font-weight: 600; }
   .dsum .st { flex: 1; min-width: 0; }
   .ord { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 10px; min-height: 36px; font: inherit; font-size: 13px; white-space: nowrap; }
-  .ord:active { opacity: .6; }
+  .ord:active, .dflt button:active { opacity: .6; }
+  .dctl { display: flex; gap: 8px; align-items: center; margin: 8px 12px 0; }
+  .dflt { flex: 1; display: flex; background: var(--bg2); border-radius: 10px; padding: 2px; }
+  .dflt button { flex: 1; border: 0; background: transparent; color: var(--text2); border-radius: 8px; padding: 6px 4px; min-height: 34px; font: inherit; font-size: 14px; }
+  .dflt button.on { background: var(--bg); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .dctl .ord { min-height: 38px; }
+  .ev.hl { background: rgba(36,129,204,.12); background: color-mix(in srgb, var(--link, #2481cc) 14%, var(--bg)); margin: 0 -12px; padding: 10px 12px; border-radius: 10px; border-bottom-color: transparent; animation: hlf 1.6s ease-out; }
+  @keyframes hlf { 0% { background: color-mix(in srgb, var(--link, #2481cc) 40%, var(--bg)); } }
   #offbar { display: none; margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; background: rgba(255,149,0,.18); background: color-mix(in srgb, #ff9500 16%, var(--bg)); color: var(--text); }
   #offbar.show { display: block; }
   #offbar button { margin-left: 8px; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 8px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: 14px; }
@@ -507,11 +514,15 @@
       '<button id="dNext"' + (isToday ? ' disabled' : '') + '>›</button>' + (isToday ? '' : '<button id="dToday">Сьогодні</button>') + '</div>';
     var visits = r.rows.filter(function (e) { return e.kind === 'visit'; });
     var last = r.rows.length ? r.rows[r.rows.length - 1] : null;
-    var rev = lsGet('hl_dayord') === 'rev';
-    h += '<div class="dsum"><div class="st">🚪 дверей <b>' + c.doors + '</b>/' + n.doors + ' · 🤝 ЛПР <b>' + c.lpr + '</b>/' + n.lpr + ' · ⏱ ≥' + n.qualityMin + ' хв <b>' + c.quality + '</b>' +
-      (c.repeats || c.returns ? ' · повтори ' + (c.repeats + c.returns) : '') +
-      (visits.length ? '<br>перший візит ' + t(visits[0].start) + ' · останній запис ' + t(last.end || last.start) : '') + '</div>' +
-      (r.rows.length > 1 ? '<button class="ord" id="dOrd">' + (rev ? '↑ спершу останні' : '↓ з ранку') + '</button>' : '') + '</div>';
+    var rev = lsGet('hl_dayord') === 'rev', onlyD = lsGet('hl_dayf') === 'doors';
+    // лічильники за сьогодні вже є вгорі — тут лише те, чого там немає; за минулі дні — повний підсумок
+    var times = visits.length ? 'перший візит ' + t(visits[0].start) + ' · останній запис ' + t(last.end || last.start) : '';
+    var rp = c.repeats || c.returns ? 'повтори ' + (c.repeats + c.returns) : '';
+    var line = isToday ? [times, rp] : ['🚪 дверей <b>' + c.doors + '</b>/' + n.doors + ' · 🤝 ЛПР <b>' + c.lpr + '</b>/' + n.lpr + ' · ⏱ ≥' + n.qualityMin + ' хв <b>' + c.quality + '</b>', rp, times];
+    line = line.filter(Boolean);
+    if (line.length) h += '<div class="dsum"><div class="st">' + line.join(' · ') + '</div></div>';
+    if (r.rows.length > 1) h += '<div class="dctl"><div class="dflt"><button data-f="all"' + (onlyD ? '' : ' class="on"') + '>Усе</button><button data-f="doors"' + (onlyD ? ' class="on"' : '') + '>🚪 Лише двері</button></div>' +
+      '<button class="ord" id="dOrd">' + (rev ? '↑ останні' : '↓ з ранку') + '</button></div>';
     if (!r.rows.length) h += '<div class="empty">' + (isToday ? 'Сьогодні ще нічого не записано' : 'Цього дня записів немає') + '</div>';
     else {
       h += '<div class="group"><div class="list">';
@@ -520,7 +531,7 @@
       mergeDay(r.rows).forEach(function (e) {   // перерви й номери дверей рахуємо по ходу дня, а показуємо в обраному порядку
         var st = e.start, gap = prevEnd && st ? mins(prevEnd, st) : 0, isV = e.kind === 'visit';
         if (isV && String(e.door) === '1') dn++;
-        items.push({ gap: isV && gap >= 30 ? '<div class="gap">⏸ ' + dur(gap) + ' без дверей</div>' : '', row: isV ? dayRow(e, String(e.door) === '1' ? dn : 0) : liteRow(e) });
+        if (isV || !onlyD) items.push({ gap: isV && gap >= 30 ? '<div class="gap">⏸ ' + dur(gap) + ' без дверей</div>' : '', row: isV ? dayRow(e, String(e.door) === '1' ? dn : 0) : liteRow(e) });
         if (isV) prevEnd = e.end || e.start;
       });
       if (rev) items.reverse().forEach(function (it) { h += it.row + it.gap; });
@@ -530,9 +541,12 @@
     box.innerHTML = h + '<div style="height:24px"></div>';
     function go(k) { S.day = k; haptic(); loadDay(); }
     if ($('#dOrd')) $('#dOrd').onclick = function () { lsSet('hl_dayord', rev ? 'fwd' : 'rev'); haptic(); drawDay(r); };
+    box.querySelectorAll('.dflt button').forEach(function (b) { b.onclick = function () { lsSet('hl_dayf', b.dataset.f); haptic(); drawDay(r); }; });
+    if (onlyD && !visits.length && r.rows.length) box.querySelector('.list').innerHTML = '<div class="empty">Цього дня дверей немає</div>';
     $('#dPrev').onclick = function () { go(addDays(date, -1)); };
     if (!isToday) { $('#dNext').onclick = function () { var nx = addDays(date, 1); go(nx >= r.today ? '' : nx); }; $('#dToday').onclick = function () { go(''); }; }
-    box.querySelectorAll('.drow,.lrow').forEach(function (el) { el.onclick = function () { if (el.dataset.id) openBiz(el.dataset.id); }; });
+    // тап по дії → картка бізнесу з підсвіченим саме цим записом в історії
+    box.querySelectorAll('.drow,.lrow').forEach(function (el) { el.onclick = function () { if (el.dataset.id) { S.focus = { id: el.dataset.id, a: el.dataset.st || '', b: el.dataset.en || el.dataset.st || '' }; openBiz(el.dataset.id); } }; });
   }
   setInterval(function () { var el = $('#openMin'), bn = $('#openBn'); if (el && bn) el.textContent = dur(Math.max(0, mins(bn.dataset.start, nowKyiv()))); }, 30000);
   function mins(a, b) { var x = Date.parse(a + ':00Z'), y = Date.parse(b + ':00Z'); return isNaN(x) || isNaN(y) ? 0 : Math.round((y - x) / 60000); }
@@ -545,6 +559,7 @@
       var p = out[out.length - 1], soft = function (x) { return x.kind === 'note' || x.kind === 'status'; };
       if (p && soft(p) && soft(e) && p.business_id === e.business_id && mins(p.start, e.start) >= 0 && mins(p.start, e.start) <= 3) {
         var m = p._m ? p : (out[out.length - 1] = Object.assign({ _m: 1 }, p));
+        m.end = e.start;
         if (e.kind === 'status') { m.kind = 'status'; m.status_after = e.status_after; m.next_dt = e.next_dt; }
         var c = String(e.comment || ''), mc = String(m.comment || '');
         if (c && !AUTO_RE.test(c) && mc.indexOf(c) < 0) m.comment = mc && !AUTO_RE.test(mc) ? mc + '; ' + c : c;
@@ -560,7 +575,7 @@
     var txt = String(e.comment || e.notes || '').replace(AUTO_RE, '↪');
     var ch = e.status_before && e.status_after && e.status_before !== e.status_after ? ' ' + (ST[e.status_before] || '') + ' → ' + (ST[e.status_after] || '') : '';
     var nx = e.next_dt && e.status_after !== 'red' && e.status_after !== 'green' ? ' · ↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '';
-    return '<div class="lrow" data-id="' + esc(e.business_id) + '"><div class="tm">' + t(e.start) + '</div><div class="bd">' + ico + ' <b>' + esc(e.name || '—') + '</b>' + esc(ch + nx) + (txt ? ' — ' + esc(txt) : '') + '</div></div>';
+    return '<div class="lrow" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + t(e.start) + '</div><div class="bd">' + ico + ' <b>' + esc(e.name || '—') + '</b>' + esc(ch + nx) + (txt ? ' — ' + esc(txt) : '') + '</div></div>';
   }
   function dayRow(e, no) {
     var isV = e.kind === 'visit' && e.end && e.end !== e.start;
@@ -579,7 +594,7 @@
     if (e.by) meta.push('від @' + e.by);
     var txt = e.comment || e.notes;
     var vis = e.kind === 'visit', badge = vis ? (no ? '<span class="dno">🚪 ' + no + '</span>' : '<span class="dno rp">' + (e.status_before === 'yellow' ? 'повтор' : 'повернення') + '</span>') : '';
-    return '<div class="drow' + (vis ? ' dv' + (no ? '' : ' rp') : '') + '" data-id="' + esc(e.business_id) + '"><div class="tm">' + tm + '</div><div class="bd">' +
+    return '<div class="drow' + (vis ? ' dv' + (no ? '' : ' rp') : '') + '" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + tm + '</div><div class="bd">' +
       '<div class="nm">' + badge + '<span class="dot s-' + cls(e.status_after) + '" style="display:inline-block;margin:0 6px 1px 0;vertical-align:middle"></span>' + esc(e.name || '—') + '</div>' +
       '<div class="mt">' + meta.filter(Boolean).map(esc).join(' · ') + '</div>' + (txt ? '<div class="cm">' + esc(txt) + '</div>' : '') + '</div></div>';
   }
@@ -602,9 +617,20 @@
       BIZ[id] = r;
       if (el.dataset.id !== id || !el.classList.contains('show')) return;
       var typing = ['fName', 'fLpr', 'fPhone', 'fNote', 'stWhy', 'stWhen', 'stFar'].some(function (k) { var x = $('#' + k); return x && (x === document.activeElement || (k === 'fNote' || k === 'stWhy') && x.value); });
-      if (typing && $('#hist')) $('#hist').innerHTML = histHtml(r.events);   // не збиваємо те, що людина вже пише
+      if (typing && $('#hist')) { $('#hist').innerHTML = histHtml(r.events); focusHist(); }   // не збиваємо те, що людина вже пише
       else renderBiz(r);
     }).catch(function (e) { if (!cached && !fromList) el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; else if (e && e.net && $('#hist') && !cached) $('#hist').innerHTML = '<div class="empty">Історія недоступна без звʼязку</div>'; });
+  }
+  // підсвітити в історії записи, на які натиснули в «День» (той самий час, ±3 хв для пари нотатка+перенесення)
+  function focusHist() {
+    var f = S.focus, el = $('#detail');
+    if (!f || el.dataset.id !== f.id) return;
+    var a = f.a, b = f.b, hit = null;
+    el.querySelectorAll('#hist .ev').forEach(function (x) {
+      var st = x.dataset.st; if (!st) return;
+      if (mins(a, st) >= 0 && mins(st, b) >= -3 && st.slice(0, 10) === a.slice(0, 10)) { x.classList.add('hl'); if (!hit) hit = x; }
+    });
+    if (hit) setTimeout(function () { try { el.scrollTop = Math.max(0, hit.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop - 90); } catch (e) {} }, 60);
   }
   function histHtml(evs) { return evs === null ? '<div class="spin">Завантаження історії…</div>' : evs.length ? dedupEv(evs).map(evRow).join('') : '<div class="empty">Порожньо</div>'; }
   // нотатка + «перенести?» → два записи з тим самим текстом за хвилину; показуємо один (перенесення, в ньому вже є текст)
@@ -626,7 +652,7 @@
       if (tg && tg.showConfirm) { try { tg.showConfirm('Нотатку не збережено. Закрити без збереження?', go); return; } catch (e) {} }
       return go(confirm('Нотатку не збережено. Закрити без збереження?'));
     }
-    $('#detail').classList.remove('show'); $('#detail').innerHTML = '';
+    $('#detail').classList.remove('show'); $('#detail').innerHTML = ''; S.focus = null;
     document.body.classList.remove('lock');
     if (tg && tg.BackButton) tg.BackButton.hide();
     syncDirty();
@@ -667,6 +693,7 @@
         '</div></div><button class="save" id="stBtn" style="display:none">Змінити статус</button><div class="msg" id="stMsg"></div></div>');
     h += '<div class="sec"><h2>Історія</h2><div class="card" id="hist">' + histHtml(r.events) + '</div></div><div style="height:24px"></div>';
     el.innerHTML = h;
+    focusHist();
     $('#bk').onclick = function () { closeBiz(); };
     var cb = $('#callBtn'); if (cb) cb.onclick = function (ev) { return window.callNum(ev, b.id, b.lpr_phone); };
     if (ed) $('#saveBtn').onclick = function () { save(b); };
@@ -699,7 +726,7 @@
     if (e.by) head.push('від @' + e.by);
     var nt = e.notes ? '<div class="evn">📝 ' + esc(e.notes) + '</div>' : '';
     var fl = e.flags ? '<div class="evn">⚠️ ' + esc(e.flags) + '</div>' : '';
-    return '<div class="ev"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span>' + head.map(esc).join(' · ') + '</div>' + txt + nt + fl + '</div>';
+    return '<div class="ev" data-st="' + esc(e.start || '') + '"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span>' + head.map(esc).join(' · ') + '</div>' + txt + nt + fl + '</div>';
   }
   function setStatus(b, to) {
     var p = { id: b.id, status: to, note: $('#stWhy').value, when: $('#stWhen').value, far: $('#stFar').value };
