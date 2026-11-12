@@ -141,6 +141,15 @@
   .drow .cm { font-size: 14px; line-height: 1.4; margin-top: 3px; }
   .gap { padding: 8px 16px 8px calc(26px + 4.5em); font-size: 14px; font-weight: 600; color: #d32f2f; background: rgba(229,57,53,.12); background: color-mix(in srgb, #e53935 13%, var(--bg)); border-bottom: 1px solid var(--sep); border-left: 4px solid #e53935; }
   .dsum { display: flex; gap: 8px; align-items: flex-start; }
+  .drow.dv { border-left: 4px solid var(--link, #2481cc); padding-left: 12px; }
+  .drow.dv.rp { border-left-color: var(--sep); }
+  .dno { display: inline-block; min-width: 22px; margin-right: 6px; padding: 0 7px; border-radius: 11px; background: var(--link, #2481cc); color: #fff; font-size: 12px; font-weight: 700; line-height: 20px; vertical-align: 1px; text-align: center; }
+  .dno.rp { background: var(--text2); }
+  .lrow { display: flex; gap: 10px; padding: 6px 16px 6px 20px; border-bottom: 1px solid var(--sep); cursor: pointer; font-size: 13px; color: var(--text2); }
+  .lrow:active { background: var(--bg2); }
+  .lrow .tm { flex: none; width: 4.5em; min-width: 62px; font-variant-numeric: tabular-nums; }
+  .lrow .bd { flex: 1; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.35; }
+  .lrow b { color: var(--text); font-weight: 600; }
   .dsum .st { flex: 1; min-width: 0; }
   .ord { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 10px; min-height: 36px; font: inherit; font-size: 13px; white-space: nowrap; }
   .ord:active { opacity: .6; }
@@ -507,10 +516,12 @@
     else {
       h += '<div class="group"><div class="list">';
       var prevEnd = '', items = [];
-      dedupEv(r.rows).forEach(function (e) {   // перерви рахуємо завжди по ходу дня, а показуємо в обраному порядку
-        var st = e.start, gap = prevEnd && st ? mins(prevEnd, st) : 0;
-        items.push({ gap: e.kind === 'visit' && gap >= 30 ? '<div class="gap">⏸ ' + dur(gap) + ' без записів</div>' : '', row: dayRow(e) });
-        if (e.kind === 'visit') prevEnd = e.end || e.start;
+      var dn = 0;
+      mergeDay(r.rows).forEach(function (e) {   // перерви й номери дверей рахуємо по ходу дня, а показуємо в обраному порядку
+        var st = e.start, gap = prevEnd && st ? mins(prevEnd, st) : 0, isV = e.kind === 'visit';
+        if (isV && String(e.door) === '1') dn++;
+        items.push({ gap: isV && gap >= 30 ? '<div class="gap">⏸ ' + dur(gap) + ' без дверей</div>' : '', row: isV ? dayRow(e, String(e.door) === '1' ? dn : 0) : liteRow(e) });
+        if (isV) prevEnd = e.end || e.start;
       });
       if (rev) items.reverse().forEach(function (it) { h += it.row + it.gap; });
       else items.forEach(function (it) { h += it.gap + it.row; });
@@ -521,17 +532,41 @@
     if ($('#dOrd')) $('#dOrd').onclick = function () { lsSet('hl_dayord', rev ? 'fwd' : 'rev'); haptic(); drawDay(r); };
     $('#dPrev').onclick = function () { go(addDays(date, -1)); };
     if (!isToday) { $('#dNext').onclick = function () { var nx = addDays(date, 1); go(nx >= r.today ? '' : nx); }; $('#dToday').onclick = function () { go(''); }; }
-    box.querySelectorAll('.drow').forEach(function (el) { el.onclick = function () { if (el.dataset.id) openBiz(el.dataset.id); }; });
+    box.querySelectorAll('.drow,.lrow').forEach(function (el) { el.onclick = function () { if (el.dataset.id) openBiz(el.dataset.id); }; });
   }
   setInterval(function () { var el = $('#openMin'), bn = $('#openBn'); if (el && bn) el.textContent = dur(Math.max(0, mins(bn.dataset.start, nowKyiv()))); }, 30000);
   function mins(a, b) { var x = Date.parse(a + ':00Z'), y = Date.parse(b + ':00Z'); return isNaN(x) || isNaN(y) ? 0 : Math.round((y - x) / 60000); }
   function dur(m) { return m >= 60 ? Math.floor(m / 60) + ' год ' + (m % 60 ? m % 60 + ' хв' : '') : m + ' хв'; }
-  function dayRow(e) {
+  // нотатка + перенесення того самого бізнесу за ≤3 хв — це одна дія агента (застосунок пише дві події)
+  var AUTO_RE = /^↪ Спроба без результату/;
+  function mergeDay(rows) {
+    var out = [];
+    dedupEv(rows).forEach(function (e) {
+      var p = out[out.length - 1], soft = function (x) { return x.kind === 'note' || x.kind === 'status'; };
+      if (p && soft(p) && soft(e) && p.business_id === e.business_id && mins(p.start, e.start) >= 0 && mins(p.start, e.start) <= 3) {
+        var m = p._m ? p : (out[out.length - 1] = Object.assign({ _m: 1 }, p));
+        if (e.kind === 'status') { m.kind = 'status'; m.status_after = e.status_after; m.next_dt = e.next_dt; }
+        var c = String(e.comment || ''), mc = String(m.comment || '');
+        if (c && !AUTO_RE.test(c) && mc.indexOf(c) < 0) m.comment = mc && !AUTO_RE.test(mc) ? mc + '; ' + c : c;
+        return;
+      }
+      out.push(e);
+    });
+    return out;
+  }
+  // дзвінки, нотатки, перенесення — тонким рядком між дверима
+  function liteRow(e) {
+    var ico = e.kind === 'call' ? '📞' : e.kind === 'payment' ? '💰' : e.kind === 'status' && e.status_before !== e.status_after ? '🔄' : e.kind === 'status' ? '🗓' : (KIND[e.kind] || '📝');
+    var txt = String(e.comment || e.notes || '').replace(AUTO_RE, '↪');
+    var ch = e.status_before && e.status_after && e.status_before !== e.status_after ? ' ' + (ST[e.status_before] || '') + ' → ' + (ST[e.status_after] || '') : '';
+    var nx = e.next_dt && e.status_after !== 'red' && e.status_after !== 'green' ? ' · ↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '';
+    return '<div class="lrow" data-id="' + esc(e.business_id) + '"><div class="tm">' + t(e.start) + '</div><div class="bd">' + ico + ' <b>' + esc(e.name || '—') + '</b>' + esc(ch + nx) + (txt ? ' — ' + esc(txt) : '') + '</div></div>';
+  }
+  function dayRow(e, no) {
     var isV = e.kind === 'visit' && e.end && e.end !== e.start;
     var tm = '<b>' + t(e.start) + '</b>' + (isV ? '→ ' + t(e.end) : '') + (e.kind === 'visit' ? '<span class="dmin">' + dur(e.minutes || mins(e.start, e.end)) + '</span>' : '');
     var meta = [], ico = KIND[e.kind] || '•';
     if (e.kind === 'visit') {
-      meta.push(e.door ? '🚪 двері' : (e.status_before === 'yellow' ? '🔁 повтор' : '↩️ повернення'));
       meta.push(e.who === 'L' ? '🤝 ЛПР' + (e.lpr_name ? ' ' + e.lpr_name : '') : e.who === 'A' ? 'адмін' : '');
     } else if (e.kind === 'call') { meta.push('📞 дзвінок'); if (e.result === 'nbt') meta.push('НБТ'); }
     else if (e.kind === 'status') meta.push(e.status_before === e.status_after ? '🗓 перенесено' : '🔄 статус');
@@ -543,8 +578,9 @@
     if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') meta.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt));
     if (e.by) meta.push('від @' + e.by);
     var txt = e.comment || e.notes;
-    return '<div class="drow" data-id="' + esc(e.business_id) + '"><div class="tm">' + tm + '</div><div class="bd">' +
-      '<div class="nm"><span class="dot s-' + cls(e.status_after) + '" style="display:inline-block;margin:0 6px 1px 0;vertical-align:middle"></span>' + esc(e.name || '—') + '</div>' +
+    var vis = e.kind === 'visit', badge = vis ? (no ? '<span class="dno">🚪 ' + no + '</span>' : '<span class="dno rp">' + (e.status_before === 'yellow' ? 'повтор' : 'повернення') + '</span>') : '';
+    return '<div class="drow' + (vis ? ' dv' + (no ? '' : ' rp') : '') + '" data-id="' + esc(e.business_id) + '"><div class="tm">' + tm + '</div><div class="bd">' +
+      '<div class="nm">' + badge + '<span class="dot s-' + cls(e.status_after) + '" style="display:inline-block;margin:0 6px 1px 0;vertical-align:middle"></span>' + esc(e.name || '—') + '</div>' +
       '<div class="mt">' + meta.filter(Boolean).map(esc).join(' · ') + '</div>' + (txt ? '<div class="cm">' + esc(txt) + '</div>' : '') + '</div></div>';
   }
 
