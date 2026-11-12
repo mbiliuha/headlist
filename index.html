@@ -148,13 +148,15 @@
   .dno.rp { background: var(--text2); }
   /* двері підфарбовані результатом: товста смуга, легкий градієнт, номер у кольорі статусу */
   .drow.dv { border-left-width: 8px; padding-left: 8px; }
-  .drow.dv.st-green { --sc: #27ae60; --sg: rgba(39,174,96,.16); }
-  .drow.dv.st-yellow { --sc: #e0a800; --sg: rgba(242,183,5,.2); }
-  .drow.dv.st-red { --sc: #e53935; --sg: rgba(229,57,53,.14); }
-  .drow.dv.st-blue { --sc: #2f80ed; --sg: rgba(47,128,237,.14); }
-  .drow.dv.st-white, .drow.dv.st-none { --sc: #9aa3ad; --sg: rgba(154,163,173,.16); }
+  .st-green { --sc: #27ae60; --sg: rgba(39,174,96,.16); }
+  .st-yellow { --sc: #e0a800; --sg: rgba(242,183,5,.2); }
+  .st-red { --sc: #e53935; --sg: rgba(229,57,53,.14); }
+  .st-blue { --sc: #2f80ed; --sg: rgba(47,128,237,.14); }
+  .st-white, .st-none { --sc: #9aa3ad; --sg: rgba(154,163,173,.16); }
   .drow.dv[class*=" st-"] { border-left-color: var(--sc); background: linear-gradient(90deg, var(--sg), transparent 70%); }
   .drow.dv[class*=" st-"] .dno { background: var(--sc); }
+  /* «Наработки»: та сама кольорова логіка — смуга й легкий градієнт за статусом */
+  .item.tint { border-left: 8px solid var(--sc, transparent); padding-left: 8px; background: linear-gradient(90deg, var(--sg, transparent), transparent 70%); }
   .lrow { display: flex; gap: 10px; padding: 6px 16px 6px 20px; border-bottom: 1px solid var(--sep); cursor: pointer; font-size: 13px; color: var(--text2); }
   .lrow:active { background: var(--bg2); }
   .lrow .tm { flex: none; width: 4.5em; min-width: 62px; font-variant-numeric: tabular-nums; }
@@ -429,7 +431,7 @@
     if (b.next_kind === 'meeting' && timeCol) sub.push('зустріч');
     if (b.next_kind === 'payment' && timeCol) sub.push('💰 дзвінок щодо оплати');
     if (b.queued) sub.push('<i class="qd">⏳ чекає відправки</i>');
-    return '<div class="item" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + cls(b.status) + '"></span><div class="body">' +
+    return '<div class="item' + (S.tab === 'tasks' ? ' tint st-' + cls(b.status || 'none') : '') + '" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + cls(b.status) + '"></span><div class="body">' +
       '<div class="name">' + esc(b.name) + '</div>' + (sub.length ? '<div class="sub">' + sub.map(function (x) { return '<span>' + x + '</span>'; }).join(' ') + '</div>' : '') +
       (b.last_comment ? '<div class="note">' + esc(b.last_comment) + '</div>' : '') + '</div>' +
       (b.lpr_phone ? '<a class="rcall" href="tel:+' + esc(digits(b.lpr_phone)) + '" data-call="' + esc(digits(b.lpr_phone)) + '" data-bid="' + esc(b.id) + '" aria-label="Подзвонити">📞</a>' : '') + '</div>';
