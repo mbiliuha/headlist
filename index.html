@@ -205,6 +205,8 @@
   var INIT = tg && tg.initData ? tg.initData : '';
   var KEY = '';   // персональний ключ із кнопки бота (Apps Script підставляє його сюди)
   if (!KEY) { var km = location.search.match(/[?&]k=([^&]+)/); if (km) { try { KEY = decodeURIComponent(km[1]); } catch (e) { KEY = ''; } } }
+  // «⋯ → Перезавантажити» у Telegram відкриває вже очищену адресу: ключ тримаємо в пам'яті цієї сесії (не в адресі й не назавжди)
+  try { if (KEY) sessionStorage.setItem('hl_k', KEY); else KEY = sessionStorage.getItem('hl_k') || ''; } catch (e) {}
   // ключ не лишаємо в адресному рядку (історія, скріншоти)
   try { if (KEY && history.replaceState) history.replaceState(null, '', location.pathname + (DEMO ? '?demo=1' : '')); } catch (e) {}
   var S = { me: null, agent: null, data: null, tab: 'tasks', q: '', filter: '' };
