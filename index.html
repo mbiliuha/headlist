@@ -50,6 +50,43 @@
   .who.bk { color: var(--link); cursor: pointer; }
   .hdbtn { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: 14px; }
   .tsum { padding: 10px 16px 0; font-size: 14px; color: var(--text2); }
+  .ochips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px 2px; scrollbar-width: none; }
+  .ochips::-webkit-scrollbar { display: none; }
+  .ochips button { flex: none; border: 0; border-radius: 16px; padding: 7px 13px; font: inherit; font-size: 14px; background: var(--bg); color: var(--text); white-space: nowrap; }
+  .ochips button.on { background: var(--link); color: #fff; font-weight: 600; }
+  .tsum b.g, .gl .g { color: var(--green-t); } .tsum b.r, .gl .r { color: var(--red-t); }
+  .ring { position: relative; flex: none; }
+  .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+  .ring circle { fill: none; stroke-width: 3.6; } .ring .rb { stroke: var(--sep); } .ring .rf { stroke-linecap: round; }
+  .ring .rl { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05; }
+  .ring .rl b { font-size: 19px; } .ring .rl span { font-size: 11px; color: var(--text2); }
+  .ocard { margin: 10px 12px; padding: 14px; border-radius: 16px; background: var(--bg); cursor: pointer; }
+  .ocard .otop { display: flex; gap: 12px; align-items: center; }
+  .ocard .oinfo { flex: 1; min-width: 0; } .ocard .on { font-weight: 700; font-size: 17px; }
+  .ocard .od { font-size: 13px; color: var(--text2); margin-top: 1px; } .ocard .os { font-size: 13px; margin-top: 3px; }
+  .ocard .chev { color: var(--text2); font-size: 22px; }
+  .oav { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; }
+  .oav::-webkit-scrollbar { display: none; }
+  .av { flex: none; width: 60px; text-align: center; }
+  .av i { width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; border: 3px solid var(--gray); display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 700; background: var(--bg2); }
+  .av.in i { border-color: var(--green); } .av.ov i { border-color: var(--red); } .av.wk i { border-color: var(--blue); }
+  .av div { font-size: 12px; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .av small { font-size: 11px; color: var(--text2); }
+  .olegend { margin: 2px 16px 14px; font-size: 12px; color: var(--text2); }
+  .gbox { margin: 8px 12px; padding: 2px 12px; border-radius: 14px; background: var(--bg); }
+  .grow { padding: 10px 0; border-bottom: 1px solid var(--sep); cursor: pointer; } .grow:last-of-type { border-bottom: 0; }
+  .grow:active { opacity: .7; }
+  .grow .gh { display: flex; gap: 8px; align-items: baseline; font-size: 15px; } .grow .gh b { flex: 1; min-width: 0; }
+  .grow .gt { font-size: 13px; white-space: nowrap; color: var(--text2); } .grow .gt .g { color: var(--green-t); font-weight: 600; } .grow .gt .r { color: var(--red-t); font-weight: 600; }
+  .gl { font-size: 12.5px; color: var(--text2); margin-top: 2px; } .gl .g, .gl .r { font-weight: 600; }
+  .gs { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 7px; }
+  .q { width: 14px; height: 14px; border-radius: 3px; display: block; }
+  .q-green { background: var(--green); } .q-yellow { background: var(--yellow); } .q-blue { background: var(--blue); } .q-red { background: var(--red); } .q-white, .q- { background: var(--gray); }
+  .q-e { border: 1.5px dashed var(--sep); }
+  .q-now { background: color-mix(in srgb, var(--green) 25%, transparent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--green); margin: 0 3px; animation: qp 1.6s ease-in-out infinite; }
+  @keyframes qp { 50% { opacity: .45; } }
+  .gpz { display: flex; align-items: center; gap: 3px; color: var(--red-t); font-size: 11px; font-weight: 600; padding: 0 2px; white-space: nowrap; }
+  .gpz::before, .gpz::after { content: ''; width: 12px; border-top: 2px dotted var(--red); opacity: .7; }
+  .glegend { font-size: 11.5px; color: var(--text2); padding: 8px 0 10px; border-top: 1px solid var(--sep); }
   .tcard { margin: 8px 12px; padding: 11px 12px; border-radius: 12px; background: var(--bg); border: 1px solid var(--sep); cursor: pointer; }
   .tcard:active { opacity: .7; }
   .tcard .tn { display: flex; gap: 8px; align-items: baseline; font-weight: 600; font-size: 16px; }
@@ -413,7 +450,7 @@
     syncBack();
   }
   function syncBack() {
-    try { if (!tg || !tg.BackButton) return; if (S.view === 'agent' && S.teamOK) tg.BackButton.show(); else tg.BackButton.hide(); } catch (e) {}
+    try { if (!tg || !tg.BackButton) return; if ((S.view === 'agent' && S.teamOK) || (S.view === 'team' && S.multiOff && S.office !== '*')) tg.BackButton.show(); else tg.BackButton.hide(); } catch (e) {}
   }
   function backToTeam() { S.view = 'team'; S.day = ''; haptic(); window.scrollTo(0, 0); chrome(); renderTeam(); }
   function openAgent(u, tab) {
@@ -432,28 +469,88 @@
       .catch(function (e) { if (S.view !== 'team') return; if (c && e && e.net) { S.offline = true; drawBar(); return; } if (!c) $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
   }
   function drawTeam(r) {
-    var n = r.norms, late = String(r.now).slice(11, 16) >= '17:00';
-    var act = [], idle = [];
-    r.agents.forEach(function (a) { if (a.biz || a.doors || a.open || a.last) act.push(a); else idle.push(a); });
-    // хто в дверях — першим, далі за дверима за сьогодні
-    act.sort(function (x, y) { return (y.open ? 1 : 0) - (x.open ? 1 : 0) || y.doors - x.doors || String(x.name).localeCompare(String(y.name)); });
-    var sumD = 0, sumL = 0, inNow = 0;
-    act.forEach(function (a) { sumD += a.doors; sumL += a.lpr; if (a.open) inNow++; });
-    var h = '<div class="tsum">Сьогодні, ' + wd(r.today) + ' ' + dm(r.today) + ' · 🚪 <b>' + sumD + '</b> дверей · 🤝 <b>' + sumL + '</b> ЛПР' + (inNow ? ' · зараз у дверях: <b>' + inNow + '</b>' : '') + '</div>';
-    act.forEach(function (a) {
-      var st = a.open ? '<div class="tin">📌 У дверях' + (a.open.bizName ? ': ' + esc(a.open.bizName) : '') + ' · ' + dur(Math.max(0, mins(a.open.start, nowKyiv()))) + '</div>' : '';
-      var when = a.first ? a.first + (a.last ? '–' + a.last : '') : 'ще не виходив';
-      function ch(lbl, v, norm, alarm) { return '<span' + (v >= norm ? ' class="ok"' : late && v <= alarm ? ' class="bad"' : '') + '>' + lbl + ' ' + v + '/' + norm + '</span>'; }
-      h += '<div class="tcard" data-u="' + esc(a.username) + '"><div class="tn"><span>' + esc(a.name) + (a.self ? ' (я)' : '') + '</span><span class="tl">' + esc(when) + '</span></div>' + st +
-        '<div class="tc">' + ch('🚪', a.doors, n.doors, n.doorsAlarm) + ch('🤝', a.lpr, n.lpr, n.lprAlarm) + '<span>⏱ ≥' + n.qualityMin + ' хв ' + a.quality + '</span>' +
-        '<span>тижд. ' + a.week_lpr + '/' + n.weekLpr + '</span>' +
-        (a.overdue ? '<span class="bad">⏰ ' + a.overdue + ' простр.</span>' : '') + (a.today_left ? '<span>📋 ще ' + a.today_left + '</span>' : '') + '</div></div>';
-    });
-    if (idle.length) h += '<div class="tgrp">Без хед-листа</div>' + idle.map(function (a) { return '<div class="tcard idle" data-u="' + esc(a.username) + '"><div class="tn"><span>' + esc(a.name) + (a.self ? ' (я)' : '') + '</span><span class="tl">немає бізнесів</span></div></div>'; }).join('');
-    if (!r.agents.length) h += '<div class="empty">Поки немає агентів.</div>';
+    var n = r.norms, today = nowKyiv().slice(0, 10), isToday = r.today === today, nowT = isToday ? nowKyiv().slice(11, 16) : '23:59';
+    var ag = r.agents.filter(function (a) { return a.role !== 'owner' || a.doors || (a.seq && a.seq.length); });
+    var offs = (r.offices || [{ id: '', name: 'Команда' }]).filter(function (o) { return ag.some(function (a) { return (a.office || '') === o.id; }); });
+    var byId = {}; offs.forEach(function (o) { byId[o.id] = o; });
+    S.multiOff = offs.length > 1;
+    var sel = lsGet('hl_off');
+    if (!S.multiOff) sel = offs.length ? offs[0].id : '*';
+    else if (sel !== '*' && !byId[sel]) sel = '*';
+    S.office = sel;
+    var who = $('#who');
+    if (S.multiOff && sel !== '*') { who.className = 'who bk'; who.textContent = '‹ Офіс ' + byId[sel].name; who.onclick = function () { setOffice('*'); }; }
+    else { who.className = 'who'; who.textContent = 'Команда'; who.onclick = null; }
+    syncBack();
+    function inOff(id) { return ag.filter(function (a) { return (a.office || '') === id; }); }
+    function sumLine(list) {
+      var d = 0, l = 0, inn = 0, ov = 0;
+      list.forEach(function (a) { d += a.doors; l += a.lpr; if (a.open) inn++; ov += a.overdue || 0; });
+      return '<div class="tsum">Сьогодні, ' + wd(r.today) + ' ' + dm(r.today) + ' · 🚪 <b>' + d + '</b>/' + list.length * n.doors + ' · 🤝 <b>' + l + '</b>/' + list.length * n.lpr +
+        (inn ? ' · <b class="g">● ' + inn + ' у дверях</b>' : '') + (ov ? ' · <b class="r">⏰ ' + ov + '</b>' : '') + '</div>';
+    }
+    var h = '';
+    if (S.multiOff) h += '<div class="ochips">' + [{ id: '*', name: 'Усі' }].concat(offs).map(function (o) {
+      return '<button data-o="' + esc(o.id) + '"' + (o.id === sel ? ' class="on"' : '') + '>' + esc(o.name) + '</button>'; }).join('') + '</div>';
+    if (sel === '*' && S.multiOff) {
+      h += sumLine(ag);
+      offs.forEach(function (o) {
+        var list = inOff(o.id), d = 0, l = 0, inn = 0, ov = 0;
+        list.forEach(function (a) { d += a.doors; l += a.lpr; if (a.open) inn++; ov += a.overdue || 0; });
+        var par = o.parent && byId[o.parent] ? byId[o.parent].name : '';
+        h += '<div class="ocard" data-o="' + esc(o.id) + '"><div class="otop">' + ring(d, list.length * n.doors, 72) + '<div class="oinfo"><div class="on">' + (o.id ? 'Офіс ' : '') + esc(o.name) + '</div>' +
+          '<div class="od">' + (o.code ? esc(o.code) + ' · ' : '') + list.length + ' ' + plural(list.length, 'людина', 'людини', 'людей') + (par ? ' · відкрив ' + esc(par) : '') + '</div>' +
+          '<div class="os">🤝 ' + l + '/' + list.length * n.lpr + (inn ? ' · <b style="color:var(--green-t)">● ' + inn + ' у дверях</b>' : '') + (ov ? ' · <b style="color:var(--red-t)">⏰ ' + ov + '</b>' : '') + '</div></div><span class="chev">›</span></div>' +
+          '<div class="oav">' + list.map(function (a) {
+            var c = a.open ? 'in' : a.overdue ? 'ov' : a.doors ? 'wk' : '';
+            return '<div class="av ' + c + '" data-u="' + esc(a.username) + '"><i>' + esc(String(a.name || a.username).trim().charAt(0).toUpperCase()) + '</i><div>' + esc(String(a.name).split(' ')[0]) + '</div><small>🚪' + a.doors + '</small></div>'; }).join('') + '</div></div>';
+      });
+      h += '<div class="olegend">Обідок: <b style="color:var(--green-t)">зелений</b> — у дверях · <b style="color:var(--red-t)">червоний</b> — є прострочені · <b style="color:var(--blue-t)">синій</b> — працює · сірий — ще не виходив</div>';
+    } else {
+      var list = inOff(sel === '*' ? (offs[0] ? offs[0].id : '') : sel);
+      list.sort(function (x, y) { return (y.open ? 1 : 0) - (x.open ? 1 : 0) || y.doors - x.doors || String(x.name).localeCompare(String(y.name)); });
+      h += sumLine(list) + '<div class="gbox">' + list.map(function (a) { return gRow(a); }).join('') +
+        (list.length ? '<div class="glegend">Квадрат — одні двері по порядку в кольорі результату · ☕ — перерва від 30 хв · пунктир — скільки до норми · рамка — зараз у дверях</div>' : '<div class="empty">Поки немає агентів.</div>') + '</div>';
+    }
+    if (!ag.length) h += '<div class="empty">Поки немає агентів.</div>';
     $('#main').innerHTML = h;
-    document.querySelectorAll('.tcard').forEach(function (el) { el.onclick = function () { openAgent(el.dataset.u); }; });
+    document.querySelectorAll('.ochips button, .ocard').forEach(function (el) { el.onclick = function () { setOffice(el.dataset.o); }; });
+    document.querySelectorAll('.av, .grow').forEach(function (el) { el.onclick = function (ev) { ev.stopPropagation(); openAgent(el.dataset.u); }; });
+    function setOffice(id) { lsSet('hl_off', id); haptic(); window.scrollTo(0, 0); drawTeam(r); }
+    S.setOffice = setOffice;
+    function hm(t) { var a = String(t || '').split(':'); return a.length < 2 ? null : +a[0] * 60 + +a[1]; }
+    function gap(m) { return '<span class="gpz">☕ ' + (m >= 60 ? Math.floor(m / 60) + ' год ' + ('0' + m % 60).slice(-2) : m + ' хв') + '</span>'; }
+    function gRow(a) {
+      var seq = a.seq || [], q = '', prevEnd = null, pend = 0, cnt = 0;
+      seq.forEach(function (v) {
+        var st = hm(v[0]), en = hm(v[1]);
+        if (prevEnd !== null && st !== null && st - prevEnd >= 30) pend = Math.max(pend, st - prevEnd);
+        if (v[3]) { if (pend) q += gap(pend); pend = 0; q += '<i class="q q-' + esc(v[2] || 'white') + '"></i>'; cnt++; }
+        if (en !== null && (prevEnd === null || en > prevEnd)) prevEnd = en;
+      });
+      var now = hm(nowT), inMin = 0;
+      if (a.open) {
+        var os = hm(String(a.open.start).slice(11, 16));
+        if (prevEnd !== null && os !== null && os - prevEnd >= 30) q += gap(os - prevEnd);
+        q += '<i class="q q-now"></i>'; cnt++; inMin = Math.max(0, mins(a.open.start, nowKyiv()));
+      }
+      for (var i = cnt; i < n.doors; i++) q += '<i class="q q-e"></i>';
+      var line;
+      if (a.first) {
+        line = '<span' + (a.first > '11:00' ? ' class="r"' : '') + '>старт ' + esc(a.first) + '</span>';
+        if (a.open) line += ' · зараз: ' + esc(a.open.bizName || 'у дверях');
+        else if (isToday && prevEnd !== null && now !== null && nowT < '19:00' && now - prevEnd >= 45) line += ' · <span class="r">остання 🚪 ' + dur(now - prevEnd).trim() + ' тому</span>';
+      } else line = a.open ? 'зараз: ' + esc(a.open.bizName || 'у дверях') : '<span' + (isToday && nowT > '11:00' ? ' class="r"' : '') + '>ще не вийшов</span>';
+      return '<div class="grow" data-u="' + esc(a.username) + '"><div class="gh"><b>' + esc(a.name) + (a.self ? ' (я)' : '') + '</b><span class="gt">' +
+        (a.open ? '<span class="g">● ' + inMin + ' хв</span> ' : '') + (a.overdue ? '<span class="r">⏰ ' + a.overdue + '</span> ' : '') + '🚪 ' + a.doors + '/' + n.doors + ' · 🤝 ' + a.lpr + '</span></div>' +
+        '<div class="gl">' + line + '</div><div class="gs">' + q + '</div></div>';
+    }
   }
+  function ring(v, max, sz) {
+    var p = max ? Math.min(100, v / max * 100) : 0, c = max && v >= max ? 'var(--green)' : 'var(--link)';
+    return '<div class="ring" style="width:' + sz + 'px;height:' + sz + 'px"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" class="rb"/><circle cx="18" cy="18" r="15.9" class="rf" style="stroke:' + c + '" stroke-dasharray="' + p.toFixed(1) + ' 100"/></svg><div class="rl"><b>' + v + '</b><span>з ' + max + '</span></div></div>';
+  }
+  function plural(k, a, b, c) { var m = k % 10, h = k % 100; return m === 1 && h !== 11 ? a : m >= 2 && m <= 4 && (h < 12 || h > 14) ? b : c; }
   // спершу показуємо збережене в телефоні (миттєво), потім тихо оновлюємо з сервера
   function boot() {
     var cm = DEMO ? null : lsGet('hl_me'), shown = false;
@@ -758,6 +855,7 @@
       if (S.tab === 'admin' && (A.form || A.person)) { A.form = null; A.person = null; drawAdmin(); tg.BackButton.hide(); return; }
       if (S.tab === 'day' && S.day) { S.day = ''; loadDay(); syncBack(); return; }
       if (S.view === 'agent' && S.teamOK) return backToTeam();
+      if (S.view === 'team' && S.multiOff && S.office !== '*' && S.setOffice) return S.setOffice('*');
       tg.BackButton.hide();
     });
   } catch (e) {}
@@ -1037,12 +1135,15 @@
         { id: 'g3', who_name: 'Шахматов', target_name: 'Ольга (стажер)', level: 'edit', until: '2026-11-01T18:00', active: false }] };
     if (action === 'list') return { now: now, today: { doors: 12, lpr: 5, quality: 3, repeats: 2 }, week: { lpr: 21, doors: 64 },
       norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 }, open: { bizName: 'Піцерія Наполі', start: '2026-11-03T15:32' }, businesses: B };
-    if (action === 'team') return { now: now, today: '2026-11-03', norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 }, agents: [
-      { username: 'evgen', name: 'Євгеній', role: 'manager', self: true, doors: 0, lpr: 0, quality: 0, first: '', last: '', week_lpr: 0, biz: 0, open_biz: 0, overdue: 0, today_left: 0, open: null },
-      { username: 'matei', name: 'Матей', role: 'agent', doors: 12, lpr: 5, quality: 3, first: '10:05', last: '15:32', week_lpr: 21, biz: 40, open_biz: 14, overdue: 1, today_left: 2, open: { bizName: 'Піцерія Наполі', start: '2026-11-03T15:32' } },
-      { username: 'sofia', name: 'Софія', role: 'manager', doors: 10, lpr: 6, quality: 5, first: '11:03', last: '15:10', week_lpr: 31, biz: 60, open_biz: 22, overdue: 3, today_left: 4, open: null },
-      { username: 'olga', name: 'Ольга (стажер)', role: 'agent', doors: 4, lpr: 1, quality: 0, first: '12:40', last: '14:02', week_lpr: 6, biz: 9, open_biz: 5, overdue: 0, today_left: 0, open: null },
-      { username: 'ivan', name: 'Іван', role: 'agent', doors: 0, lpr: 0, quality: 0, first: '', last: '', week_lpr: 12, biz: 18, open_biz: 7, overdue: 2, today_left: 1, open: null }] };
+    if (action === 'team') { var td = nowKyiv().slice(0, 10); return { now: td + 'T15:40', today: td, norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 },
+      offices: [{ id: 'evgen', name: 'Шахматов', code: 'KV1', parent: '', mine: true }, { id: 'sofia', name: 'Софія', code: 'KV3', parent: 'evgen' }], agents: [
+      { username: 'evgen', name: 'Євгеній', role: 'manager', self: true, office: 'evgen', doors: 5, lpr: 3, quality: 1, first: '10:15', last: '13:08', week_lpr: 12, biz: 30, open_biz: 9, overdue: 0, today_left: 1, open: null, seq: [['10:15', '10:40', 'green', 1], ['10:50', '10:59', 'yellow', 1], ['11:14', '11:18', 'blue', 1], ['12:50', '12:56', 'white', 1], ['13:02', '13:08', 'red', 1]] },
+      { username: 'matei', name: 'Матей', role: 'agent', office: 'evgen', doors: 11, lpr: 6, quality: 3, first: '10:06', last: '15:13', week_lpr: 24, biz: 30, open_biz: 9, overdue: 1, today_left: 1, open: { bizName: 'Піцерія Наполі', start: td + 'T15:26' }, seq: [['10:06', '10:10', 'green', 1], ['10:20', '10:35', 'yellow', 1], ['10:43', '10:58', 'blue', 1], ['11:13', '11:17', 'white', 1], ['11:32', '11:38', 'red', 1], ['13:08', '13:14', 'white', 1], ['13:26', '13:35', 'yellow', 1], ['13:43', '13:58', 'white', 1], ['14:06', '14:10', 'blue', 1], ['14:18', '14:43', 'red', 1], ['14:58', '15:13', 'yellow', 1]] },
+      { username: 'olena', name: 'Олена', role: 'agent', office: 'evgen', doors: 14, lpr: 9, quality: 4, first: '10:00', last: '13:53', week_lpr: 36, biz: 30, open_biz: 9, overdue: 0, today_left: 1, open: null, seq: [['10:00', '10:06', 'green', 1], ['10:14', '10:18', 'green', 1], ['10:24', '10:30', 'yellow', 1], ['10:38', '10:44', 'blue', 1], ['10:52', '11:01', 'white', 1], ['11:11', '11:17', 'white', 1], ['11:32', '11:38', 'red', 1], ['11:46', '11:52', 'blue', 1], ['12:04', '12:13', 'yellow', 1], ['12:19', '12:28', 'yellow', 1], ['12:40', '12:46', 'white', 1], ['12:54', '13:03', 'white', 1], ['13:09', '13:18', 'yellow', 1], ['13:28', '13:53', 'blue', 1]] },
+      { username: 'ivan', name: 'Іван', role: 'agent', office: 'evgen', doors: 0, lpr: 0, quality: 0, first: '', last: '', week_lpr: 0, biz: 30, open_biz: 9, overdue: 2, today_left: 1, open: null, seq: [] },
+      { username: 'sofia', name: 'Софія', role: 'manager', office: 'sofia', doors: 10, lpr: 5, quality: 2, first: '10:18', last: '14:40', week_lpr: 20, biz: 30, open_biz: 9, overdue: 3, today_left: 1, open: null, seq: [['10:18', '10:43', 'green', 1], ['10:49', '11:14', 'yellow', 1], ['11:24', '11:28', 'blue', 1], ['12:32', '12:41', 'red', 1], ['12:51', '13:06', 'white', 1], ['13:16', '13:22', 'white', 1], ['13:34', '13:49', 'blue', 1], ['13:57', '14:01', 'yellow', 1], ['14:11', '14:15', 'red', 1], ['14:25', '14:40', 'white', 1]] },
+      { username: 'taras', name: 'Тарас', role: 'agent', office: 'sofia', doors: 17, lpr: 10, quality: 5, first: '10:03', last: '16:42', week_lpr: 40, biz: 30, open_biz: 9, overdue: 0, today_left: 1, open: { bizName: 'СТО Мотор', start: td + 'T15:34' }, seq: [['10:03', '10:07', 'green', 1], ['10:22', '10:37', 'blue', 1], ['10:47', '11:02', 'yellow', 1], ['11:17', '11:21', 'green', 1], ['11:33', '11:37', 'yellow', 1], ['11:45', '12:10', 'white', 1], ['12:18', '12:22', 'white', 1], ['12:30', '12:45', 'blue', 1], ['12:55', '13:20', 'red', 1], ['13:30', '13:55', 'yellow', 1], ['14:05', '14:20', 'green', 1], ['14:26', '14:51', 'white', 1], ['15:01', '15:10', 'blue', 1], ['15:16', '15:31', 'white', 1], ['15:37', '15:43', 'yellow', 1], ['15:53', '16:18', 'red', 1], ['16:33', '16:42', 'red', 1]] },
+      { username: 'olga', name: 'Ольга (стажер)', role: 'agent', office: 'sofia', doors: 4, lpr: 1, quality: 0, first: '11:36', last: '12:39', week_lpr: 4, biz: 30, open_biz: 9, overdue: 0, today_left: 1, open: null, seq: [['11:36', '11:42', 'white', 1], ['11:52', '12:01', 'red', 1], ['12:16', '12:20', 'white', 1], ['12:30', '12:39', 'yellow', 1]] }] }; }
     if (action === 'day') return { date: p.date || '2026-11-03', today: '2026-11-03', counters: { doors: 3, lpr: 2, quality: 1, repeats: 1, returns: 0 }, norms: { doors: 20, lpr: 10, qualityMin: 20 }, open: null,
       rows: p.date && p.date !== '2026-11-03' ? [] : [
         { business_id: 'b1', name: 'Кавʼярня Арома', kind: 'visit', start: '2026-11-03T10:05', end: '2026-11-03T10:30', minutes: 25, who: 'L', door: true, lpr_name: 'Сергій', status_before: '', status_after: 'yellow', next_dt: '2026-11-03T16:30', comment: 'Думає над 3д туром, порадиться з дружиною' },
