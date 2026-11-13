@@ -46,6 +46,22 @@
   .tabs { display: flex; background: var(--bg2); border-radius: 10px; padding: 3px; }
   .tab { flex: 1; text-align: center; padding: 9px 4px; min-height: 40px; white-space: nowrap; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--text2); border: 0; background: none; font-family: inherit; }
   .tab.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  /* панель «Команда» */
+  .who.bk { color: var(--link); cursor: pointer; }
+  .hdbtn { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: 14px; }
+  .tsum { padding: 10px 16px 0; font-size: 14px; color: var(--text2); }
+  .tcard { margin: 8px 12px; padding: 11px 12px; border-radius: 12px; background: var(--bg); border: 1px solid var(--sep); cursor: pointer; }
+  .tcard:active { opacity: .7; }
+  .tcard .tn { display: flex; gap: 8px; align-items: baseline; font-weight: 600; font-size: 16px; }
+  .tcard .tn span:first-child { flex: 1; min-width: 0; }
+  .tcard .tl { font-size: 13px; color: var(--text2); font-weight: 400; white-space: nowrap; }
+  .tcard .tin { margin-top: 4px; font-size: 14px; color: var(--link); }
+  .tcard .tc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+  .tcard .tc span { background: var(--bg2); border-radius: 8px; padding: 3px 8px; font-size: 13px; white-space: nowrap; }
+  .tcard .tc .bad { color: var(--red-t); font-weight: 600; }
+  .tcard .tc .ok { color: var(--green-t, #18794e); font-weight: 600; }
+  .tcard.idle { opacity: .6; padding: 9px 12px; }
+  .tgrp { padding: 14px 16px 2px; font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: .3px; }
   .banner { margin: 10px 12px 0; background: rgba(43,125,233,.14); background: color-mix(in srgb, var(--btn) 14%, var(--bg)); border-radius: 12px; padding: 10px 12px; font-size: 15px; }
   .group { margin: 14px 0 0; }
   .gtitle { font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--text2); padding: 0 16px 6px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
@@ -347,6 +363,7 @@
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) return;
     if (Q.length) flushQ();
+    else if (S.view === 'team' && S.me) renderTeam();
     else if (S.me && S.agent && S.data && Date.now() - (S.loadedAt || 0) > 60000 && !$('#detail').classList.contains('show') && S.tab !== 'admin') load(true);
   });
   setInterval(function () { if (Q.length && !document.hidden) flushQ(); }, 60000);
@@ -365,6 +382,8 @@
     S.me = me;
     var others = me.agents.filter(function (a) { return a.username !== me.me.username; });
     if (!S.agent || !me.agents.some(function (a) { return a.username === S.agent; })) S.agent = me.me.role === 'agent' ? me.me.username : (others[0] || me.me).username;
+    S.teamOK = others.length > 0 && (me.me.admin || me.me.role !== 'agent');
+    if (!S.view) S.view = S.teamOK ? 'team' : 'agent';   // керівник щоразу стартує з панелі команди
     $('#who').textContent = me.me.role === 'agent' ? me.me.name : 'Команда';
     if (me.me.role !== 'agent' && me.agents.length) {
       var sel = $('#agentSel');
@@ -375,19 +394,77 @@
     }
     if (me.me.admin) $('#tabAdmin').style.display = '';
     if (!me.agents.length) { S.tab = 'admin'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === 'admin'); }); }
+    chrome();
     drawBar();
+  }
+  // шапка під поточний екран: панель команди або хед-лист конкретного агента
+  function chrome() {
+    var team = S.view === 'team', who = $('#who'), sel = $('#agentSel');
+    document.querySelector('.tabsbar').style.display = team ? 'none' : '';
+    if (team) {
+      who.className = 'who'; who.textContent = 'Команда'; who.onclick = null; sel.style.display = 'none'; $('#stats').innerHTML = '';
+      if (!$('#accBtn') && S.me && S.me.me.admin) who.insertAdjacentHTML('afterend', '<button class="hdbtn" id="accBtn">🔑 Доступи</button>');
+      if ($('#accBtn')) $('#accBtn').onclick = function () { openAgent(null, 'admin'); };
+    } else {
+      if ($('#accBtn')) $('#accBtn').remove();
+      if (S.teamOK) { who.className = 'who bk'; who.textContent = '‹ Команда'; who.onclick = backToTeam; }
+      if (S.me && S.me.me.role !== 'agent' && S.me.agents.length) { sel.style.display = ''; sel.value = S.agent; }
+    }
+    syncBack();
+  }
+  function syncBack() {
+    try { if (!tg || !tg.BackButton) return; if (S.view === 'agent' && S.teamOK) tg.BackButton.show(); else tg.BackButton.hide(); } catch (e) {}
+  }
+  function backToTeam() { S.view = 'team'; S.day = ''; haptic(); window.scrollTo(0, 0); chrome(); renderTeam(); }
+  function openAgent(u, tab) {
+    S.view = 'agent'; if (u) { S.agent = u; S.day = ''; S.data = lsGet('hl_list_' + u); }
+    S.tab = tab || 'tasks';
+    document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === S.tab); });
+    haptic(); window.scrollTo(0, 0); chrome();
+    if (S.tab === 'admin') return render();
+    if (S.data) { render(); load(true); } else load();
+  }
+  // ── панель «Команда»: як справи в кожного агента зараз ──
+  function renderTeam() {
+    var c = lsGet('hl_team_' + (S.me ? S.me.me.username : ''));
+    if (c && c.agents) drawTeam(c); else $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
+    api('team').then(function (r) { lsSet('hl_team_' + S.me.me.username, r); S.offline = false; drawBar(); if (S.view === 'team') drawTeam(r); })
+      .catch(function (e) { if (S.view !== 'team') return; if (c && e && e.net) { S.offline = true; drawBar(); return; } if (!c) $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  }
+  function drawTeam(r) {
+    var n = r.norms, late = String(r.now).slice(11, 16) >= '17:00';
+    var act = [], idle = [];
+    r.agents.forEach(function (a) { if (a.biz || a.doors || a.open || a.last) act.push(a); else idle.push(a); });
+    // хто в дверях — першим, далі за дверима за сьогодні
+    act.sort(function (x, y) { return (y.open ? 1 : 0) - (x.open ? 1 : 0) || y.doors - x.doors || String(x.name).localeCompare(String(y.name)); });
+    var sumD = 0, sumL = 0, inNow = 0;
+    act.forEach(function (a) { sumD += a.doors; sumL += a.lpr; if (a.open) inNow++; });
+    var h = '<div class="tsum">Сьогодні, ' + wd(r.today) + ' ' + dm(r.today) + ' · 🚪 <b>' + sumD + '</b> дверей · 🤝 <b>' + sumL + '</b> ЛПР' + (inNow ? ' · зараз у дверях: <b>' + inNow + '</b>' : '') + '</div>';
+    act.forEach(function (a) {
+      var st = a.open ? '<div class="tin">📌 У дверях' + (a.open.bizName ? ': ' + esc(a.open.bizName) : '') + ' · ' + dur(Math.max(0, mins(a.open.start, nowKyiv()))) + '</div>' : '';
+      var when = a.first ? a.first + (a.last ? '–' + a.last : '') : 'ще не виходив';
+      function ch(lbl, v, norm, alarm) { return '<span' + (v >= norm ? ' class="ok"' : late && v <= alarm ? ' class="bad"' : '') + '>' + lbl + ' ' + v + '/' + norm + '</span>'; }
+      h += '<div class="tcard" data-u="' + esc(a.username) + '"><div class="tn"><span>' + esc(a.name) + (a.self ? ' (я)' : '') + '</span><span class="tl">' + esc(when) + '</span></div>' + st +
+        '<div class="tc">' + ch('🚪', a.doors, n.doors, n.doorsAlarm) + ch('🤝', a.lpr, n.lpr, n.lprAlarm) + '<span>⏱ ≥' + n.qualityMin + ' хв ' + a.quality + '</span>' +
+        '<span>тижд. ' + a.week_lpr + '/' + n.weekLpr + '</span>' +
+        (a.overdue ? '<span class="bad">⏰ ' + a.overdue + ' простр.</span>' : '') + (a.today_left ? '<span>📋 ще ' + a.today_left + '</span>' : '') + '</div></div>';
+    });
+    if (idle.length) h += '<div class="tgrp">Без хед-листа</div>' + idle.map(function (a) { return '<div class="tcard idle" data-u="' + esc(a.username) + '"><div class="tn"><span>' + esc(a.name) + (a.self ? ' (я)' : '') + '</span><span class="tl">немає бізнесів</span></div></div>'; }).join('');
+    if (!r.agents.length) h += '<div class="empty">Поки немає агентів.</div>';
+    $('#main').innerHTML = h;
+    document.querySelectorAll('.tcard').forEach(function (el) { el.onclick = function () { openAgent(el.dataset.u); }; });
   }
   // спершу показуємо збережене в телефоні (миттєво), потім тихо оновлюємо з сервера
   function boot() {
     var cm = DEMO ? null : lsGet('hl_me'), shown = false;
     if (cm && cm.me && cm.agents) {
-      try { applyMe(cm); var cl = lsGet('hl_list_' + S.agent); if (cl && cl.businesses) { S.data = cl; render(); shown = true; } } catch (e) { shown = false; }
+      try { applyMe(cm); if (S.view === 'team') { renderTeam(); shown = true; } else { var cl = lsGet('hl_list_' + S.agent); if (cl && cl.businesses) { S.data = cl; render(); shown = true; } } } catch (e) { shown = false; }
     }
     api('me').then(function (me) {
       lsSet('hl_me', me); applyMe(me);
-      if (me.agents.length) load(shown); else if (me.me.admin) render(); else $('#main').innerHTML = '<div class="empty">Доступу до даних агентів поки немає. Його видає власник.</div>';
+      if (S.view === 'team') renderTeam(); else if (me.agents.length) load(shown); else if (me.me.admin) render(); else $('#main').innerHTML = '<div class="empty">Доступу до даних агентів поки немає. Його видає власник.</div>';
     }).catch(function (e) {
-      if (cm && e && e.net) { S.offline = true; drawBar(); if (!shown && cm.agents.length) load(); return; }
+      if (cm && e && e.net) { S.offline = true; drawBar(); if (!shown && cm.agents.length && S.view !== 'team') load(); return; }
       if (e && (e.message === 'auth' || e.message === 'not_agent')) { try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('hl_') === 0 && k.indexOf('hl_q_') !== 0) localStorage.removeItem(k); }); } catch (x) {} S.data = null; }
       $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>';
     });
@@ -450,6 +527,7 @@
   }
 
   function render() {
+    if (S.view === 'team') return renderTeam();
     if (S.tab === 'admin') return renderAdmin();
     $('#agentSel').style.visibility = '';
     if (!S.data) return load();
@@ -669,7 +747,7 @@
     }
     $('#detail').classList.remove('show'); $('#detail').innerHTML = ''; S.focus = null;
     document.body.classList.remove('lock');
-    if (tg && tg.BackButton) tg.BackButton.hide();
+    syncBack();
     syncDirty();
     if (S.stale) { S.stale = false; if (S.data && S.tab !== 'admin') render(); }
   }
@@ -678,7 +756,8 @@
     if (tg && tg.BackButton) tg.BackButton.onClick(function () {
       if ($('#detail').classList.contains('show')) return closeBiz();
       if (S.tab === 'admin' && (A.form || A.person)) { A.form = null; A.person = null; drawAdmin(); tg.BackButton.hide(); return; }
-      if (S.tab === 'day' && S.day) { S.day = ''; loadDay(); tg.BackButton.hide(); return; }
+      if (S.tab === 'day' && S.day) { S.day = ''; loadDay(); syncBack(); return; }
+      if (S.view === 'agent' && S.teamOK) return backToTeam();
       tg.BackButton.hide();
     });
   } catch (e) {}
@@ -958,6 +1037,12 @@
         { id: 'g3', who_name: 'Шахматов', target_name: 'Ольга (стажер)', level: 'edit', until: '2026-11-01T18:00', active: false }] };
     if (action === 'list') return { now: now, today: { doors: 12, lpr: 5, quality: 3, repeats: 2 }, week: { lpr: 21, doors: 64 },
       norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 }, open: { bizName: 'Піцерія Наполі', start: '2026-11-03T15:32' }, businesses: B };
+    if (action === 'team') return { now: now, today: '2026-11-03', norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 }, agents: [
+      { username: 'evgen', name: 'Євгеній', role: 'manager', self: true, doors: 0, lpr: 0, quality: 0, first: '', last: '', week_lpr: 0, biz: 0, open_biz: 0, overdue: 0, today_left: 0, open: null },
+      { username: 'matei', name: 'Матей', role: 'agent', doors: 12, lpr: 5, quality: 3, first: '10:05', last: '15:32', week_lpr: 21, biz: 40, open_biz: 14, overdue: 1, today_left: 2, open: { bizName: 'Піцерія Наполі', start: '2026-11-03T15:32' } },
+      { username: 'sofia', name: 'Софія', role: 'manager', doors: 10, lpr: 6, quality: 5, first: '11:03', last: '15:10', week_lpr: 31, biz: 60, open_biz: 22, overdue: 3, today_left: 4, open: null },
+      { username: 'olga', name: 'Ольга (стажер)', role: 'agent', doors: 4, lpr: 1, quality: 0, first: '12:40', last: '14:02', week_lpr: 6, biz: 9, open_biz: 5, overdue: 0, today_left: 0, open: null },
+      { username: 'ivan', name: 'Іван', role: 'agent', doors: 0, lpr: 0, quality: 0, first: '', last: '', week_lpr: 12, biz: 18, open_biz: 7, overdue: 2, today_left: 1, open: null }] };
     if (action === 'day') return { date: p.date || '2026-11-03', today: '2026-11-03', counters: { doors: 3, lpr: 2, quality: 1, repeats: 1, returns: 0 }, norms: { doors: 20, lpr: 10, qualityMin: 20 }, open: null,
       rows: p.date && p.date !== '2026-11-03' ? [] : [
         { business_id: 'b1', name: 'Кавʼярня Арома', kind: 'visit', start: '2026-11-03T10:05', end: '2026-11-03T10:30', minutes: 25, who: 'L', door: true, lpr_name: 'Сергій', status_before: '', status_after: 'yellow', next_dt: '2026-11-03T16:30', comment: 'Думає над 3д туром, порадиться з дружиною' },
