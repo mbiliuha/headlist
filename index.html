@@ -133,6 +133,29 @@
   .chip small { opacity: .7; font-size: 13px; margin-left: 2px; }
   .chip.on { background: var(--btn); color: var(--btn-text); border-color: var(--btn); }
   /* картка бізнесу */
+  /* підготовка до переговорів */
+  .pbn { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .pbn b.l { margin-left: auto; color: var(--link); font-weight: 600; }
+  .pcard { margin: 10px 12px; padding: 12px 14px; border-radius: 14px; background: var(--bg); }
+  .plbl { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text2); margin-bottom: 6px; }
+  .phook { font-size: 18px; font-weight: 700; line-height: 1.32; }
+  .pchips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pchip { border: 1.5px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 999px; padding: 8px 12px; font: inherit; font-size: 14px; }
+  .pchip.on { background: color-mix(in srgb, var(--btn) 16%, var(--bg)); border-color: var(--btn); color: var(--text); font-weight: 600; }
+  .pchip.bad.on { background: color-mix(in srgb, var(--red) 14%, var(--bg)); border-color: var(--red); }
+  .pfacts { font-size: 15px; line-height: 1.5; } .pfacts .r { color: var(--red-t); font-weight: 600; }
+  .prow { padding: 8px 0; border-top: 1px solid var(--sep); } .prow:first-child { border-top: 0; }
+  .prow > div:first-child { font-size: 14px; color: var(--text2); margin-bottom: 6px; }
+  .popt { display: block; width: 100%; text-align: left; border: 1.5px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 12px; padding: 10px 12px; margin-top: 7px; font: inherit; font-size: 15px; line-height: 1.35; }
+  .popt.on { border-color: var(--btn); background: color-mix(in srgb, var(--btn) 10%, var(--bg)); }
+  .psrch { display: flex; gap: 6px; margin-top: 8px; } .psrch button { flex: 1; border: 0; border-radius: 10px; padding: 11px 4px; font: inherit; font-size: 14px; font-weight: 600; background: var(--bg2); color: var(--text); }
+  .pitem { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--sep); cursor: pointer; } .pitem:first-child { border-top: 0; }
+  .pitem .ic { font-size: 20px; line-height: 1.2; } .pitem .nm { font-weight: 600; font-size: 16px; } .pitem .sb { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .pitem .del { margin-left: auto; border: 0; background: none; color: var(--text2); font-size: 18px; padding: 0 4px; }
+  .pcnt { font-size: 12px; color: var(--text2); text-align: right; margin-top: 4px; }
+  .pbtn { display: block; width: calc(100% - 24px); margin: 10px 12px 0; border: 1.5px dashed var(--sep); background: none; color: var(--link); border-radius: 12px; padding: 12px; font: inherit; font-weight: 600; }
+  .pcard textarea { width: 100%; border: 1px solid var(--sep); border-radius: 10px; padding: 10px; font: inherit; font-size: 15px; background: var(--bg); color: var(--text); resize: vertical; box-sizing: border-box; }
+  details.parg summary { cursor: pointer; color: var(--link); font-weight: 600; font-size: 14px; margin-top: 8px; }
   #detail { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg2); overflow-y: auto; z-index: 20; display: none; padding-bottom: calc(var(--sab) + 24px); overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
   #detail.show { display: block; }
   .dhead { background: var(--bg); padding: 14px 16px; border-bottom: 1px solid var(--sep); }
@@ -253,6 +276,7 @@
   var API = 'https://script.google.com/macros/s/AKfycbz3pcpvLKDI_dqep5V_RSkmkxvB0Vv4DuGqLpmXa_ECrQNSVabpdt0Ecj5UAvsr6Qn9Yg/exec';
   var tg = window.Telegram && window.Telegram.WebApp;
   var DEMO = /[?&]demo=1/.test(location.search);
+  var WANTPREP = /[?&]v=prep/.test(location.search);
   // режим Apps Script: сторінка в iframe Google, initData беремо з адреси верхнього вікна
   var GAS = !!(window.google && google.script && google.script.run);
   var INIT = tg && tg.initData ? tg.initData : '';
@@ -262,7 +286,7 @@
   try { if (KEY) sessionStorage.setItem('hl_k', KEY); else KEY = sessionStorage.getItem('hl_k') || ''; } catch (e) {}
   // ключ не лишаємо в адресному рядку (історія, скріншоти)
   try { if (KEY && history.replaceState) history.replaceState(null, '', location.pathname + (DEMO ? '?demo=1' : '')); } catch (e) {}
-  var S = { me: null, agent: null, data: null, tab: 'tasks', q: '', filter: '' };
+  var S = { me: null, agent: null, data: null, tab: 'tasks', q: '', filter: '', wantPrep: WANTPREP };
   var ST = { green: 'Договір', red: 'Відпрацьовано', yellow: 'Думає', blue: 'Зустріч з ЛПР', white: 'Вийти на ЛПР', '': 'Без статусу' };
   function isOpenSt(s) { return s === 'yellow' || s === 'blue' || s === 'white'; }
   var WD = ['нд', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
@@ -574,6 +598,8 @@
       Q.forEach(function (it) { var b = data.businesses.filter(function (x) { return x.id === it.p.id; })[0]; if (b && !it.err) { if (it.action === 'status') b.status = it.p.status; b.queued = true; } });
       cacheList(); drawBar(); if (!$('#detail').classList.contains('show') || !quiet) render(); else S.stale = true; prefetch(data.businesses.filter(function (b) { return isOpenSt(b.status) || b.next_kind === 'payment'; }));
       if (Q.length) flushQ();
+      if (!S.prep || S.prep.agent !== S.agent) S.prep = null;
+      loadPrep();
     }).catch(function (e) {
       var c = e && e.net && lsGet('hl_list_' + S.agent);
       if (c) { S.offline = true; S.data = c; BIZ = {}; drawBar(); render(); return; }
@@ -631,9 +657,10 @@
     stats();
     var x = S.data, html = '';
     if (x.open) html += '<div class="banner" id="openBn" data-start="' + esc(x.open.start) + '">📌 Зараз у візиті з ' + t(x.open.start) + (x.open.bizName ? ': <b>' + esc(x.open.bizName) + '</b>' : '') + ' · ⏱ <b id="openMin">' + dur(Math.max(0, mins(x.open.start, nowKyiv()))) + '</b></div>';
-    if (S.tab === 'day') { $('#main').innerHTML = html + '<div id="dayBox"><div class="spin">Завантаження…</div></div>'; return loadDay(); }
+    html += prepBanner();
+    if (S.tab === 'day') { $('#main').innerHTML = html + '<div id="dayBox"><div class="spin">Завантаження…</div></div>'; bindPrepBn(); return loadDay(); }
     if (S.tab === 'tasks') html += tasksView(); else html += allView();
-    $('#main').innerHTML = html;
+    $('#main').innerHTML = html; bindPrepBn();
     var inp = $('#q');
     var tq;
     if (inp) { inp.value = S.q; inp.oninput = function () { S.q = inp.value; clearTimeout(tq); tq = setTimeout(function () { var l = $('#allList'); if (l) { l.innerHTML = allList(); bindReset(); } }, 120); }; }
@@ -851,7 +878,7 @@
   // кнопка «назад» Telegram / Android: один обробник на весь застосунок
   try {
     if (tg && tg.BackButton) tg.BackButton.onClick(function () {
-      if ($('#detail').classList.contains('show')) return closeBiz();
+      if ($('#detail').classList.contains('show')) return String($('#detail').dataset.id || '').indexOf('prepf:') === 0 ? prepBack() : closeBiz();
       if (S.tab === 'admin' && (A.form || A.person)) { A.form = null; A.person = null; drawAdmin(); tg.BackButton.hide(); return; }
       if (S.tab === 'day' && S.day) { S.day = ''; loadDay(); syncBack(); return; }
       if (S.view === 'agent' && S.teamOK) return backToTeam();
@@ -859,6 +886,201 @@
       tg.BackButton.hide();
     });
   } catch (e) {}
+
+  // ── Підготовка до переговорів ──
+  var PF = { site: [['yes', 'є'], ['no', 'немає'], ['bad', 'слабкий']], rev: [['ok', 'достатньо'], ['few', 'мало'], ['noans', 'без відповідей']],
+    pos: [['top3', 'топ-3'], ['top10', 'до 10'], ['low', 'нижче 10'], ['none', 'не видно']], ver: [['yes', 'так'], ['no', 'ні'], ['unk', 'не знаю']], tour: [['yes', 'є'], ['no', 'немає']] };
+  var PFL = { site: '🌐 Сайт', rev: '⭐ Відгуки', pos: '📍 Позиція за запитом', ver: '✅ Верифікація профілю', tour: '🎥 3D-тур' };
+  var PFT = { site: { yes: 'сайт є', no: 'сайту немає', bad: 'сайт слабкий' }, rev: { ok: 'відгуків достатньо', few: 'відгуків мало', noans: 'відгуки без відповідей' },
+    pos: { top3: 'у топ-3', top10: 'у топ-10', low: 'нижче 10-го місця', none: 'не видно взагалі' }, ver: { yes: 'верифікований', no: 'не верифікований', unk: 'верифікація — ?' }, tour: { yes: 'тур є', no: 'туру немає' } };
+  var PBAD = { site: ['no', 'bad'], rev: ['few', 'noans'], pos: ['low', 'none'], ver: ['no'], tour: ['no'] };
+  var PP = [['ads', '📍 ADS на карти'], ['tour', '🎥 3D-тур'], ['serv', '🛠 Обслуговування'], ['site', '🌐 Сайт'], ['verif', '🔁 Верифікація'], ['qr', '⭐ QR на відгуки']];
+  function sugProd(f) {
+    var o = {};
+    if (f.pos === 'low' || f.pos === 'none') { o.ads = 1; o.serv = 1; }
+    if (f.site === 'no' || f.site === 'bad') o.site = 1;
+    if (f.rev === 'few' || f.rev === 'noans') { o.qr = 1; o.serv = 1; }
+    if (f.ver === 'no') o.verif = 1;
+    if (f.tour === 'no') o.tour = 1;
+    return PP.map(function (x) { return x[0]; }).filter(function (k) { return o[k]; });
+  }
+  function sugHooks(f, q) {
+    var r = [], qq = q ? '«' + q + '»' : 'вашим основним запитом';
+    if (f.pos === 'none') r.push('За запитом ' + qq + ' вас у Google просто не видно — клієнт іде до сусідів.');
+    if (f.pos === 'low') r.push('За запитом ' + qq + ' ви нижче 10-го місця — до вас доходить лише той, хто вже вас знає.');
+    if (f.site === 'no') r.push('У вас немає сайту — хто шукає вас з телефона, бачить лише чужі сторінки.');
+    if (f.site === 'bad') r.push('Сайт у вас є, але з телефона ним незручно користуватись — а більшість клієнтів шукає саме з телефона.');
+    if (f.rev === 'noans') r.push('На відгуки ніхто не відповідає — клієнт бачить це раніше, ніж вас.');
+    if (f.rev === 'few') r.push('Відгуків майже немає — клієнт обирає того, кому вже довіряють інші.');
+    if (f.ver === 'no') r.push('Профіль не підтверджений — будь-хто може змінити у ньому номер чи графік.');
+    if (f.tour === 'no') r.push('Клієнт не бачить ваш заклад зсередини — 3D-тур показує його ще до першого дзвінка.');
+    if (f.pos === 'top3') r.push('Ви вже в топ-3 за ' + qq + ' — тепер важливо втримати це місце, поки сусіди не обігнали.');
+    if (r.length < 3) r.push('Покажу за 2 хвилини, як вас бачать клієнти в Google порівняно з сусідами.');
+    return r.slice(0, 3);
+  }
+  // шпаргалка зверху картки бізнесу
+  function prepCardHtml(pr) {
+    var bad = [];
+    Object.keys(PBAD).forEach(function (k) { if (pr[k] && PBAD[k].indexOf(pr[k]) >= 0) bad.push('<span class="r">' + esc((k === 'pos' && pr.q ? '«' + pr.q + '» — ' : '') + PFT[k][pr[k]]) + '</span>'); });
+    var prod = (pr.prod || []).map(function (c) { var x = PP.filter(function (y) { return y[0] === c; })[0]; return x ? '<span class="pchip on">' + esc(x[1]) + '</span>' : ''; }).join('');
+    return '<div class="pcard"><div class="plbl">🎯 Скажи першим</div><div class="phook">' + esc(pr.hook) + '</div></div>' +
+      (prod ? '<div class="pcard"><div class="plbl">Пропонуємо</div><div class="pchips">' + prod + '</div></div>' : '') +
+      (bad.length ? '<div class="pcard"><div class="plbl">Факти</div><div class="pfacts">' + bad.join(' · ') + '</div></div>' : '') +
+      (pr.arg ? '<div class="pcard"><details class="parg"><summary>Аргумент повністю</summary><div style="margin-top:6px;font-size:15px;line-height:1.4">' + esc(pr.arg) + '</div></details></div>' : '');
+  }
+  function loadPrep() {
+    if (DEMO && !S.data) return;
+    api('prep', { agent: S.agent }).then(function (r) {
+      S.prep = r;
+      var bn = $('#prepBn'); if (bn) bn.outerHTML = prepBanner(); bindPrepBn();
+      if ($('#detail').dataset.id === 'prep' && $('#detail').classList.contains('show')) drawPrep();
+      if (S.wantPrep) { S.wantPrep = false; openPrep(); }
+    }).catch(function () {});
+  }
+  function prepBanner() {
+    var r = S.prep; if (!r || !r.editable) return '<span id="prepBn"></span>';
+    var n = r.items.length, done = r.items.filter(function (x) { return x.done; }).length;
+    if (!n && (S.data && t(S.data.now) < '16:00')) return '<span id="prepBn"></span>';
+    return '<div class="banner pbn" id="prepBn">🎯 Підготовка · ' + wd(r.date) + ' ' + dm(r.date) + (n ? ': <b>' + done + ' з ' + n + '</b>' : ': зустрічей немає') + '<b class="l">' + (n && done < n ? 'Готуватись ›' : '＋ додати ›') + '</b></div>';
+  }
+  function bindPrepBn() { var bn = $('#prepBn'); if (bn && bn.classList.contains('pbn')) bn.onclick = function () { openPrep(); }; }
+  function showPanel(id) {
+    var el = $('#detail'); el.dataset.id = id; el.classList.add('show'); el.scrollTop = 0;
+    document.body.classList.add('lock'); if (tg && tg.BackButton) tg.BackButton.show();
+    return el;
+  }
+  function openPrep() { haptic(); showPanel('prep'); drawPrep(); }
+  function drawPrep() {
+    var el = $('#detail'), r = S.prep;
+    if (!r) { el.innerHTML = '<div class="spin">Завантаження…</div>'; return loadPrep(); }
+    var done = r.items.filter(function (x) { return x.done; }).length;
+    var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>🎯 Підготовка</h1><div class="next">до переговорів · ' + wd(r.date) + ' ' + dm(r.date) + ' · готово <b>' + done + ' з ' + r.items.length + '</b></div></div>';
+    h += '<div class="pcard">' + (r.items.length ? r.items.map(function (it) {
+      var b = it.business, tm = !it.added && b.next_dt && d(b.next_dt) === r.date ? t(b.next_dt) + ' · ' : '';
+      return '<div class="pitem" data-id="' + esc(b.id) + '"><span class="ic">' + (it.done ? '✅' : '⬜') + '</span><div style="flex:1;min-width:0"><div class="nm">' + esc(b.name) + '</div><div class="sb">' + tm + (it.added ? 'додав сам' : '🔵 зустріч') + (b.lpr_name ? ' · ' + esc(b.lpr_name) : '') + '</div>' +
+        (it.hook ? '<div class="sb" style="color:var(--text)">«' + esc(it.hook) + '»</div>' : '') + '</div>' + (it.added && r.editable ? '<button class="del" data-del="' + esc(b.id) + '">✕</button>' : '') + '</div>';
+    }).join('') : '<div class="empty" style="padding:14px 0">Зустрічей на цей день немає. Додай бізнес, до якого хочеш підготуватись.</div>') + '</div>';
+    if (r.editable) h += '<button class="pbtn" id="pAdd">＋ Додати бізнес</button><div id="pAddBox"></div>';
+    h += '<div class="msg" style="margin:12px 16px">На кожен бізнес ~3 хв: загугли, відміть факти кнопками, вибери перше речення.</div>';
+    el.innerHTML = h;
+    $('#bk').onclick = function () { closeBiz(); };
+    el.querySelectorAll('.pitem').forEach(function (x) { x.onclick = function (ev) { if (ev.target.closest('.del')) return; openPrepForm(x.dataset.id, 'list'); }; });
+    el.querySelectorAll('[data-del]').forEach(function (x) { x.onclick = function () { haptic(); api('prep_del', { id: x.dataset.del, date: r.date }).then(function () { loadPrep(); }).catch(function (e) { try { tg.showAlert(errText(e)); } catch (q) {} }); }; });
+    var ad = $('#pAdd'); if (ad) ad.onclick = function () { drawPrepAdd(); };
+  }
+  function drawPrepAdd() {
+    var box = $('#pAddBox'); if (!box) return;
+    box.innerHTML = '<div class="pcard"><div class="plbl">Додати бізнес</div><input id="pAddQ" style="width:100%;border:1px solid var(--sep);border-radius:10px;padding:10px;font:inherit;background:var(--bg);color:var(--text)" placeholder="Назва: з твого хед-листа або новий з карт" autocomplete="off"><div id="pAddL"></div></div>';
+    var inp = $('#pAddQ'); inp.focus();
+    var inQ = {}; (S.prep.items || []).forEach(function (x) { inQ[x.business.id] = 1; });
+    function draw() {
+      var q = inp.value.trim().toLowerCase(), list = (S.data ? S.data.businesses : []).filter(function (b) { return !inQ[b.id] && b.status !== 'red' && b.status !== 'green' && (!q || String(b.name).toLowerCase().indexOf(q) >= 0); });
+      list.sort(function (a, b) { return (a.status === 'white' ? 0 : 1) - (b.status === 'white' ? 0 : 1); });
+      var h = list.slice(0, 8).map(function (b) { return '<div class="pitem" data-add="' + esc(b.id) + '"><span class="dot s-' + cls(b.status) + '" style="margin-top:6px"></span><div><div class="nm">' + esc(b.name) + '</div><div class="sb">' + esc(ST[b.status || ''] || '') + (b.lpr_name ? ' · ' + esc(b.lpr_name) : '') + '</div></div></div>'; }).join('');
+      if (inp.value.trim().length >= 2) h += '<div class="pitem" data-new="1"><span class="ic">＋</span><div><div class="nm">Новий: «' + esc(inp.value.trim()) + '»</div><div class="sb">бізнес, якого ще немає в хед-листі (знайшов на картах)</div></div></div>';
+      $('#pAddL').innerHTML = h || '<div class="sb" style="padding:8px 0">Почни писати назву…</div>';
+      $('#pAddL').querySelectorAll('.pitem').forEach(function (x) {
+        x.onclick = function () {
+          haptic(); x.style.opacity = '.5';
+          api('prep_add', x.dataset.new ? { name: inp.value.trim(), agent: S.agent, date: S.prep.date } : { id: x.dataset.add, date: S.prep.date }).then(function (r) {
+            if (r && r.ok === false) { try { tg.showAlert(r.error); } catch (q) {} return; }
+            if (r.business && S.data && !S.data.businesses.some(function (b) { return b.id === r.business.id; })) { S.data.businesses.unshift(r.business); cacheList(); }
+            loadPrep();
+          }).catch(function (e) { x.style.opacity = ''; try { tg.showAlert(errText(e)); } catch (q) {} });
+        };
+      });
+    }
+    inp.oninput = draw; draw();
+  }
+  function openLnk(u) { try { if (tg && tg.openLink) return tg.openLink(u); } catch (e) {} window.open(u, '_blank'); }
+  function copyTxt(txt) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt); return true; } } catch (e) {}
+    try { var ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); var ok = document.execCommand('copy'); ta.remove(); return ok; } catch (e) { return false; }
+  }
+  function openPrepForm(id, from) {
+    haptic(); var el = showPanel('prepf:' + id); S.prepFrom = from;
+    var b = (S.data && S.data.businesses.filter(function (x) { return x.id === id; })[0]) || (BIZ[id] && BIZ[id].business) || ((S.prep && S.prep.items.filter(function (x) { return x.business.id === id; })[0]) || {}).business;
+    if (BIZ[id] && 'prep' in BIZ[id]) return drawPrepForm(b || BIZ[id].business, BIZ[id].prep || {});
+    el.innerHTML = '<div class="spin">Завантаження…</div>';
+    api('biz', { id: id }).then(function (r) { BIZ[id] = r; if (el.dataset.id === 'prepf:' + id) drawPrepForm(r.business, r.prep || {}); }).catch(function (e) { el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  }
+  function drawPrepForm(b, pr0) {
+    var el = $('#detail'), f = {}, touched = !!(pr0.prod && pr0.prod.length);
+    Object.keys(PF).forEach(function (k) { if (pr0[k]) f[k] = pr0[k]; });
+    var prod = {}; (pr0.prod || []).forEach(function (c) { prod[c] = 1; });
+    var nx = b.next_dt && b.status === 'blue' ? '🔵 зустріч ' + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) : (ST[b.status || ''] || '');
+    var h = '<div class="dhead"><button class="back" id="bk">‹ ' + (S.prepFrom === 'list' ? 'Підготовка' : 'Назад') + '</button><h1>' + esc(b.name) + '</h1><div class="next">' + esc(nx) + (b.lpr_name ? ' · 👤 ' + esc(b.lpr_name) : '') + '</div>' +
+      (b.last_comment ? '<div class="sb" style="margin-top:6px;color:var(--text2);font-size:14px">Минулого разу: «' + esc(b.last_comment) + '»</div>' : '') + '</div>';
+    h += '<div class="pcard"><div class="plbl">1 · Знайди</div><input id="pQ" style="width:100%;border:1px solid var(--sep);border-radius:10px;padding:10px;font:inherit;background:var(--bg);color:var(--text)" placeholder="Ключовий запит, напр. «автомайстерня Оболонь»" value="' + esc(pr0.q || '') + '" autocomplete="off" maxlength="80">' +
+      '<div class="psrch"><button id="sG">🔎 Google</button><button id="sA">✨ Gemini</button><button id="sM">🗺 Карти</button></div></div>';
+    h += '<div class="pcard"><div class="plbl">2 · Факти</div>' + Object.keys(PF).map(function (k) {
+      return '<div class="prow"><div>' + PFL[k] + '</div><div class="pchips">' + PF[k].map(function (o) { return '<button class="pchip' + (PBAD[k].indexOf(o[0]) >= 0 ? ' bad' : '') + (f[k] === o[0] ? ' on' : '') + '" data-f="' + k + '" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
+    }).join('') + '</div>';
+    h += '<div class="pcard"><div class="plbl">3 · Пропонуємо</div><div class="pchips" id="pProd"></div><div class="pcnt" id="pWhy" style="text-align:left"></div></div>';
+    h += '<div class="pcard"><div class="plbl">4 · Перше речення — з нього почнеш</div><div id="pHooks"></div>' +
+      '<textarea id="pHook" maxlength="220" rows="3" style="margin-top:8px" placeholder="Обери варіант вище і підправ — або напиши своє">' + esc(pr0.hook || '') + '</textarea><div class="pcnt" id="pCnt"></div>' +
+      '<details class="parg"' + (pr0.arg ? ' open' : '') + '><summary>Аргумент повністю (необовʼязково)</summary><textarea id="pArg" maxlength="600" rows="4" style="margin-top:6px" placeholder="Що ще скажеш, якщо зацікавиться">' + esc(pr0.arg || '') + '</textarea></details></div>';
+    h += '<button class="save" id="pSave">✅ Готово</button><div class="msg" id="pMsg"></div><div style="height:24px"></div>';
+    el.innerHTML = h;
+    $('#bk').onclick = function () { prepBack(); };
+    function q() { return $('#pQ').value.trim(); }
+    $('#sG').onclick = function () { openLnk('https://www.google.com/search?q=' + encodeURIComponent(b.name + (q() ? ' ' + q() : ''))); };
+    $('#sM').onclick = function () { openLnk('https://www.google.com/maps/search/' + encodeURIComponent(q() || b.name)); };
+    $('#sA').onclick = function () {
+      var pr = 'Що ти знаєш про бізнес «' + b.name + '»' + (q() ? ' (' + q() + ')' : '') + '? Сайт і чи він зручний з телефона, відгуки в Google і чи відповідають на них, соцмережі, профіль у Google Картах: що в ньому слабке і що варто покращити.';
+      var ok = copyTxt(pr);
+      try { tg.showAlert(ok ? 'Запит для Gemini скопійовано — встав його там.' : 'Скопіюй запит:\n\n' + pr, function () { openLnk('https://gemini.google.com/app'); }); } catch (e) { openLnk('https://gemini.google.com/app'); }
+    };
+    function drawProd() {
+      if (!touched) { prod = {}; sugProd(f).forEach(function (k) { prod[k] = 1; }); }
+      $('#pProd').innerHTML = PP.map(function (x) { return '<button class="pchip' + (prod[x[0]] ? ' on' : '') + '" data-p="' + x[0] + '">' + x[1] + '</button>'; }).join('');
+      $('#pProd').querySelectorAll('[data-p]').forEach(function (bt) { bt.onclick = function () { haptic(); touched = true; if (prod[bt.dataset.p]) delete prod[bt.dataset.p]; else prod[bt.dataset.p] = 1; drawProd(); }; });
+      $('#pWhy').textContent = touched ? '' : (Object.keys(f).length ? 'підсвічено за фактами — зніми зайве' : 'відміть факти — бот підкаже, що пропонувати');
+    }
+    function drawHooks() {
+      var cur = $('#pHook').value.trim();
+      $('#pHooks').innerHTML = Object.keys(f).length ? sugHooks(f, q()).map(function (x) { return '<button class="popt' + (cur === x ? ' on' : '') + '">' + esc(x) + '</button>'; }).join('') : '<div class="pcnt" style="text-align:left">відміть факти — і тут зʼявляться готові варіанти</div>';
+      $('#pHooks').querySelectorAll('.popt').forEach(function (bt) { bt.onclick = function () { haptic(); $('#pHook').value = bt.textContent; cnt(); drawHooks(); }; });
+    }
+    function cnt() { var n = $('#pHook').value.length; $('#pCnt').textContent = n + ' / 220'; }
+    el.querySelectorAll('[data-f]').forEach(function (bt) {
+      bt.onclick = function () {
+        haptic(); var k = bt.dataset.f;
+        if (f[k] === bt.dataset.v) delete f[k]; else f[k] = bt.dataset.v;
+        el.querySelectorAll('[data-f="' + k + '"]').forEach(function (x) { x.classList.toggle('on', f[k] === x.dataset.v); });
+        drawProd(); drawHooks();
+      };
+    });
+    $('#pQ').oninput = function () { drawHooks(); };
+    $('#pHook').oninput = function () { cnt(); };
+    drawProd(); drawHooks(); cnt();
+    $('#pSave').onclick = function () {
+      var btn = $('#pSave'), msg = $('#pMsg');
+      var prep = { q: q(), hook: $('#pHook').value.trim(), arg: $('#pArg').value.trim(), prod: PP.map(function (x) { return x[0]; }).filter(function (k) { return prod[k]; }) };
+      Object.keys(f).forEach(function (k) { prep[k] = f[k]; });
+      btn.disabled = true; btn.textContent = 'Зберігаю…'; msg.className = 'msg'; msg.textContent = '';
+      api('prep_save', { id: b.id, prep: prep, date: S.prep ? S.prep.date : '' }).then(function (r) {
+        btn.disabled = false; btn.textContent = '✅ Готово';
+        if (r && r.ok === false) { hn('error'); msg.className = 'msg err'; msg.textContent = r.error; return; }
+        hn('success');
+        if (BIZ[b.id]) BIZ[b.id].prep = r.prep; else BIZ[b.id] = { business: r.business, events: null, editable: true, prep: r.prep };
+        if (S.prep) S.prep.items.forEach(function (x) { if (x.business.id === b.id) { x.done = true; x.hook = r.prep.hook; } });
+        var nb = $('#prepBn'); if (nb) { nb.outerHTML = prepBanner(); bindPrepBn(); }
+        if (S.prepFrom === 'list') {   // одразу наступний непідготовлений — менше тапів
+          var nxt = S.prep && S.prep.items.filter(function (x) { return !x.done; })[0];
+          if (nxt) return openPrepForm(nxt.business.id, 'list');
+          return openPrep();
+        }
+        prepBack();
+      }).catch(function (e) { btn.disabled = false; btn.textContent = '✅ Готово'; hn('error'); msg.className = 'msg err'; msg.textContent = errText(e); });
+    };
+  }
+  function prepBack() {
+    var id = ($('#detail').dataset.id || '').slice(6);
+    if (S.prepFrom === 'list') return openPrep();
+    if (S.prepFrom === 'biz') return openBiz(id);
+    closeBiz();
+  }
   function renderBiz(r) {
     var b = r.business, ed = r.editable, el = $('#detail');
     var next = '';
@@ -868,6 +1090,8 @@
     var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>' + esc(b.name) + '</h1>' +
       '<span class="pill"><span class="dot s-' + cls(b.status) + '" style="margin:0"></span>' + esc(ST[b.status || ''] || '') + (b.status === 'red' ? (b.red_kind === 'exhausted' ? ' · пробити неможливо' : b.red_kind === 'closed' ? ' · бізнес закрився' : b.red_kind === 'meeting' ? ' · відмова від зустрічі (тел.)' : ' · відмова ЛПР') : '') + '</span>' + next +
       (b.queued ? '<div class="msg" style="margin:8px 0 0">⏳ Є невідправлені зміни — підуть самі, коли зʼявиться звʼязок.</div>' : '') + '</div>';
+    if (r.prep && r.prep.hook) h += prepCardHtml(r.prep) + (ed ? '<button class="pbtn" id="pEdit">✏️ Змінити підготовку</button>' : '');
+    else if (ed && b.status !== 'red' && b.status !== 'green') h += '<button class="pbtn" id="pEdit">🎯 Підготуватись до переговорів</button>';
     h += '<div class="sec"><h2>Контакт</h2><div class="card">' +
       '<div class="field"><label>Назва</label><input id="fName" enterkeyhint="done" autocomplete="off" value="' + esc(b.name) + '"' + (ed ? '' : ' disabled') + '></div>' +
       '<div class="field"><label>ЛПР</label><input id="fLpr" enterkeyhint="done" autocomplete="off" value="' + esc(b.lpr_name) + '" placeholder="імʼя"' + (ed ? '' : ' disabled') + '></div>' +
@@ -887,6 +1111,7 @@
     el.innerHTML = h;
     focusHist();
     $('#bk').onclick = function () { closeBiz(); };
+    var pe = $('#pEdit'); if (pe) pe.onclick = function () { openPrepForm(b.id, 'biz'); };
     var cb = $('#callBtn'); if (cb) cb.onclick = function (ev) { return window.callNum(ev, b.id, b.lpr_phone); };
     if (ed) $('#saveBtn').onclick = function () { save(b); };
     syncDirty();
@@ -1151,10 +1376,13 @@
         { business_id: 'b1', name: 'Кавʼярня Арома', kind: 'call', start: '2026-11-03T12:15', minutes: 0, status_before: 'yellow', status_after: 'yellow', comment: 'Не взяв' },
         { business_id: 'b3', name: 'Квіти Лілія', kind: 'visit', start: '2026-11-03T13:30', end: '2026-11-03T13:52', minutes: 22, who: 'L', door: true, lpr_name: 'Ірина', status_before: '', status_after: 'red', comment: 'Не цікаво, вже є сайт' }] };
     if (action === 'biz') { var b = B.filter(function (x) { return x.id === p.id; })[0];
-      return { business: b, editable: true, events: [
+      return { business: b, editable: true, prep: b.id === 'b2' ? { hook: 'За запитом «СТО Оболонь» ви нижче 10-го місця — до вас доходить лише той, хто вже вас знає.', q: 'СТО Оболонь', pos: 'low', site: 'no', rev: 'noans', ver: 'yes', prod: ['ads', 'serv', 'site'], arg: 'По Оболоні багато СТО, а вас за основними послугами не підтягує. Сезон ремонтів уже почався.' } : null, events: [
         { date: '2026-11-02', start: '2026-11-02T11:40', minutes: 22, kind: 'visit', who: 'L', status_after: b.status, door: true, comment: b.last_comment, notes: 'адмін Оля 0671112233; власник буває після 16' },
         { date: '2026-10-30', start: '2026-10-30T15:10', minutes: 4, kind: 'visit', who: 'A', status_after: 'blue', door: true, comment: '', notes: 'ЛПР не було, адмін дала номер' }] }; }
     if (action === 'update') return { ok: true, changed: ['нотатка'], business: B[0] };
+    if (action === 'prep') return { agent: 'matei', date: '2026-11-04', today: '2026-11-03', editable: true, items: [{ business: B[3], added: false, done: false, hook: '' }, { business: B[1], added: true, done: true, hook: 'За запитом «СТО Оболонь» ви нижче 10-го місця — до вас доходить лише той, хто вже вас знає.' }] };
+    if (action === 'prep_save') return { ok: true, business: B.filter(function (x) { return x.id === p.id; })[0], prep: Object.assign({ at: now }, p.prep) };
+    if (action === 'prep_add' || action === 'prep_del') return { ok: true, business: B[0] };
   }
 
   if (GAS && !INIT && !KEY && google.script.url) {
