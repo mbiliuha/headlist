@@ -50,6 +50,9 @@
   .who.bk { color: var(--link); cursor: pointer; }
   .hdbtn { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: 14px; }
   .tsum { padding: 10px 16px 0; font-size: 14px; color: var(--text2); }
+  .psum { margin: 8px 12px 0; padding: 10px 12px; border-radius: 14px; background: var(--bg); font-size: 13.5px; color: var(--text2); line-height: 1.45; }
+  .psum small { display: block; font-size: 12px; margin-top: 1px; } .psum .pst { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--sep); font-size: 12.5px; }
+  .psum b { color: var(--text); } .psum b.g { color: var(--green-t); } .psum b.r { color: var(--red-t); }
   .ochips { display: flex; gap: 6px; overflow-x: auto; padding: 10px 12px 2px; scrollbar-width: none; }
   .ochips::-webkit-scrollbar { display: none; }
   .ochips button { flex: none; border: 0; border-radius: 16px; padding: 7px 13px; font: inherit; font-size: 14px; background: var(--bg); color: var(--text); white-space: nowrap; }
@@ -511,7 +514,26 @@
       var d = 0, l = 0, inn = 0, ov = 0;
       list.forEach(function (a) { d += a.doors; l += a.lpr; if (a.open) inn++; ov += a.overdue || 0; });
       return '<div class="tsum">Сьогодні, ' + wd(r.today) + ' ' + dm(r.today) + ' · 🚪 <b>' + d + '</b>/' + list.length * n.doors + ' · 🤝 <b>' + l + '</b>/' + list.length * n.lpr +
-        (inn ? ' · <b class="g">● ' + inn + ' у дверях</b>' : '') + (ov ? ' · <b class="r">⏰ ' + ov + '</b>' : '') + '</div>';
+        (inn ? ' · <b class="g">● ' + inn + ' у дверях</b>' : '') + (ov ? ' · <b class="r">⏰ ' + ov + '</b>' : '') + '</div>' + prepSum(list);
+    }
+    // підготовка до переговорів: хто готовий на найближчий день + 30-денна статистика «з підготовкою / без»
+    var pDay = r.prep_date || r.today, nowHM = nowKyiv().slice(11, 16), pLate = pDay === r.today ? true : nowHM >= '21:00';
+    function prepCls(p) { return !p ? '' : p[0] >= p[1] ? 'g' : pLate ? 'r' : 'm'; }
+    function prepSum(list) {
+      var dn = 0, tot = 0, who = [], w = [0, 0, 0, 0];
+      list.forEach(function (a) {
+        if (a.prep) { dn += a.prep[0]; tot += a.prep[1]; if (a.prep[0] < a.prep[1]) who.push(String(a.name).split(' ')[0] + ' ' + a.prep[0] + '/' + a.prep[1]); }
+        (a.pw || []).forEach(function (v, i) { w[i] += v; });
+      });
+      if (!tot && !w[0]) return '';
+      var h = '<div class="psum">';
+      if (tot) h += '<div>🎯 Підготовка на ' + (pDay === r.today ? 'сьогодні' : wd(pDay) + ' ' + dm(pDay)) + ': <b class="' + (dn >= tot ? 'g' : pLate ? 'r' : '') + '">' + dn + ' з ' + tot + '</b>' +
+        (who.length ? '<small>не готові: ' + esc(who.join(' · ')) + '</small>' : '<small>усі готові ✅</small>') + '</div>';
+      if (w[0]) {
+        var np = w[0] - w[1], pc = function (a, b) { return b ? Math.round(a / b * 100) + '%' : '—'; };
+        h += '<div class="pst">За 30 днів зустрічей: <b>' + w[0] + '</b>, з підготовкою <b>' + pc(w[1], w[0]) + '</b><br>Договір: з підготовкою <b class="g">' + pc(w[2], w[1]) + '</b> (' + w[2] + '/' + w[1] + ') · без — <b>' + pc(w[3], np) + '</b> (' + w[3] + '/' + np + ')</div>';
+      }
+      return h + '</div>';
     }
     var h = '';
     if (S.multiOff) h += '<div class="ochips">' + [{ id: '*', name: 'Усі' }].concat(offs).map(function (o) {
@@ -519,12 +541,12 @@
     if (sel === '*' && S.multiOff) {
       h += sumLine(ag);
       offs.forEach(function (o) {
-        var list = inOff(o.id), d = 0, l = 0, inn = 0, ov = 0;
-        list.forEach(function (a) { d += a.doors; l += a.lpr; if (a.open) inn++; ov += a.overdue || 0; });
+        var list = inOff(o.id), d = 0, l = 0, inn = 0, ov = 0, pd = 0, pt = 0;
+        list.forEach(function (a) { d += a.doors; l += a.lpr; if (a.open) inn++; ov += a.overdue || 0; if (a.prep) { pd += a.prep[0]; pt += a.prep[1]; } });
         var par = o.parent && byId[o.parent] ? byId[o.parent].name : '';
         h += '<div class="ocard" data-o="' + esc(o.id) + '"><div class="otop">' + ring(d, list.length * n.doors, 72) + '<div class="oinfo"><div class="on">' + (o.id ? 'Офіс ' : '') + esc(o.name) + '</div>' +
           '<div class="od">' + (o.code ? esc(o.code) + ' · ' : '') + list.length + ' ' + plural(list.length, 'людина', 'людини', 'людей') + (par ? ' · відкрив ' + esc(par) : '') + '</div>' +
-          '<div class="os">🤝 ' + l + '/' + list.length * n.lpr + (inn ? ' · <b style="color:var(--green-t)">● ' + inn + ' у дверях</b>' : '') + (ov ? ' · <b style="color:var(--red-t)">⏰ ' + ov + '</b>' : '') + '</div></div><span class="chev">›</span></div>' +
+          '<div class="os">🤝 ' + l + '/' + list.length * n.lpr + (inn ? ' · <b style="color:var(--green-t)">● ' + inn + ' у дверях</b>' : '') + (ov ? ' · <b style="color:var(--red-t)">⏰ ' + ov + '</b>' : '') + (pt ? ' · <b' + (pd >= pt ? ' style="color:var(--green-t)"' : pLate ? ' style="color:var(--red-t)"' : '') + '>🎯 ' + pd + '/' + pt + '</b>' : '') + '</div></div><span class="chev">›</span></div>' +
           '<div class="oav">' + list.map(function (a) {
             var c = a.open ? 'in' : a.overdue ? 'ov' : a.doors ? 'wk' : '';
             return '<div class="av ' + c + '" data-u="' + esc(a.username) + '"><i>' + esc(String(a.name || a.username).trim().charAt(0).toUpperCase()) + '</i><div>' + esc(String(a.name).split(' ')[0]) + '</div><small>🚪' + a.doors + '</small></div>'; }).join('') + '</div></div>';
@@ -566,7 +588,7 @@
         else if (isToday && prevEnd !== null && now !== null && nowT < '19:00' && now - prevEnd >= 45) line += ' · <span class="r">остання 🚪 ' + dur(now - prevEnd).trim() + ' тому</span>';
       } else line = a.open ? 'зараз: ' + esc(a.open.bizName || 'у дверях') : '<span' + (isToday && nowT > '11:00' ? ' class="r"' : '') + '>ще не вийшов</span>';
       return '<div class="grow" data-u="' + esc(a.username) + '"><div class="gh"><b>' + esc(a.name) + (a.self ? ' (я)' : '') + '</b><span class="gt">' +
-        (a.open ? '<span class="g">● ' + inMin + ' хв</span> ' : '') + (a.overdue ? '<span class="r">⏰ ' + a.overdue + '</span> ' : '') + '🚪 ' + a.doors + '/' + n.doors + ' · 🤝 ' + a.lpr + '</span></div>' +
+        (a.open ? '<span class="g">● ' + inMin + ' хв</span> ' : '') + (a.overdue ? '<span class="r">⏰ ' + a.overdue + '</span> ' : '') + (a.prep ? '<span class="' + prepCls(a.prep) + '">🎯 ' + a.prep[0] + '/' + a.prep[1] + '</span> ' : '') + '🚪 ' + a.doors + '/' + n.doors + ' · 🤝 ' + a.lpr + '</span></div>' +
         '<div class="gl">' + line + '</div><div class="gs">' + q + '</div></div>';
     }
   }
@@ -1363,8 +1385,8 @@
     if (action === 'team') { var td = nowKyiv().slice(0, 10); return { now: td + 'T15:40', today: td, norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 },
       offices: [{ id: 'evgen', name: 'Шахматов', code: 'KV1', parent: '', mine: true }, { id: 'sofia', name: 'Софія', code: 'KV3', parent: 'evgen' }], agents: [
       { username: 'evgen', name: 'Євгеній', role: 'manager', self: true, office: 'evgen', doors: 5, lpr: 3, quality: 1, first: '10:15', last: '13:08', week_lpr: 12, biz: 30, open_biz: 9, overdue: 0, today_left: 1, open: null, seq: [['10:15', '10:40', 'green', 1], ['10:50', '10:59', 'yellow', 1], ['11:14', '11:18', 'blue', 1], ['12:50', '12:56', 'white', 1], ['13:02', '13:08', 'red', 1]] },
-      { username: 'matei', name: 'Матей', role: 'agent', office: 'evgen', doors: 11, lpr: 6, quality: 3, first: '10:06', last: '15:13', week_lpr: 24, biz: 30, open_biz: 9, overdue: 1, today_left: 1, open: { bizName: 'Піцерія Наполі', start: td + 'T15:26' }, seq: [['10:06', '10:10', 'green', 1], ['10:20', '10:35', 'yellow', 1], ['10:43', '10:58', 'blue', 1], ['11:13', '11:17', 'white', 1], ['11:32', '11:38', 'red', 1], ['13:08', '13:14', 'white', 1], ['13:26', '13:35', 'yellow', 1], ['13:43', '13:58', 'white', 1], ['14:06', '14:10', 'blue', 1], ['14:18', '14:43', 'red', 1], ['14:58', '15:13', 'yellow', 1]] },
-      { username: 'olena', name: 'Олена', role: 'agent', office: 'evgen', doors: 14, lpr: 9, quality: 4, first: '10:00', last: '13:53', week_lpr: 36, biz: 30, open_biz: 9, overdue: 0, today_left: 1, open: null, seq: [['10:00', '10:06', 'green', 1], ['10:14', '10:18', 'green', 1], ['10:24', '10:30', 'yellow', 1], ['10:38', '10:44', 'blue', 1], ['10:52', '11:01', 'white', 1], ['11:11', '11:17', 'white', 1], ['11:32', '11:38', 'red', 1], ['11:46', '11:52', 'blue', 1], ['12:04', '12:13', 'yellow', 1], ['12:19', '12:28', 'yellow', 1], ['12:40', '12:46', 'white', 1], ['12:54', '13:03', 'white', 1], ['13:09', '13:18', 'yellow', 1], ['13:28', '13:53', 'blue', 1]] },
+      { username: 'matei', name: 'Матей', role: 'agent', office: 'evgen', doors: 11, lpr: 6, quality: 3, first: '10:06', last: '15:13', week_lpr: 24, biz: 30, open_biz: 9, overdue: 1, today_left: 1, prep: [1, 3], pw: [9, 5, 3, 1], open: { bizName: 'Піцерія Наполі', start: td + 'T15:26' }, seq: [['10:06', '10:10', 'green', 1], ['10:20', '10:35', 'yellow', 1], ['10:43', '10:58', 'blue', 1], ['11:13', '11:17', 'white', 1], ['11:32', '11:38', 'red', 1], ['13:08', '13:14', 'white', 1], ['13:26', '13:35', 'yellow', 1], ['13:43', '13:58', 'white', 1], ['14:06', '14:10', 'blue', 1], ['14:18', '14:43', 'red', 1], ['14:58', '15:13', 'yellow', 1]] },
+      { username: 'olena', name: 'Олена', role: 'agent', office: 'evgen', doors: 14, lpr: 9, quality: 4, first: '10:00', last: '13:53', week_lpr: 36, biz: 30, open_biz: 9, overdue: 0, today_left: 1, prep: [2, 2], pw: [11, 10, 6, 0], open: null, seq: [['10:00', '10:06', 'green', 1], ['10:14', '10:18', 'green', 1], ['10:24', '10:30', 'yellow', 1], ['10:38', '10:44', 'blue', 1], ['10:52', '11:01', 'white', 1], ['11:11', '11:17', 'white', 1], ['11:32', '11:38', 'red', 1], ['11:46', '11:52', 'blue', 1], ['12:04', '12:13', 'yellow', 1], ['12:19', '12:28', 'yellow', 1], ['12:40', '12:46', 'white', 1], ['12:54', '13:03', 'white', 1], ['13:09', '13:18', 'yellow', 1], ['13:28', '13:53', 'blue', 1]] },
       { username: 'ivan', name: 'Іван', role: 'agent', office: 'evgen', doors: 0, lpr: 0, quality: 0, first: '', last: '', week_lpr: 0, biz: 30, open_biz: 9, overdue: 2, today_left: 1, open: null, seq: [] },
       { username: 'sofia', name: 'Софія', role: 'manager', office: 'sofia', doors: 10, lpr: 5, quality: 2, first: '10:18', last: '14:40', week_lpr: 20, biz: 30, open_biz: 9, overdue: 3, today_left: 1, open: null, seq: [['10:18', '10:43', 'green', 1], ['10:49', '11:14', 'yellow', 1], ['11:24', '11:28', 'blue', 1], ['12:32', '12:41', 'red', 1], ['12:51', '13:06', 'white', 1], ['13:16', '13:22', 'white', 1], ['13:34', '13:49', 'blue', 1], ['13:57', '14:01', 'yellow', 1], ['14:11', '14:15', 'red', 1], ['14:25', '14:40', 'white', 1]] },
       { username: 'taras', name: 'Тарас', role: 'agent', office: 'sofia', doors: 17, lpr: 10, quality: 5, first: '10:03', last: '16:42', week_lpr: 40, biz: 30, open_biz: 9, overdue: 0, today_left: 1, open: { bizName: 'СТО Мотор', start: td + 'T15:34' }, seq: [['10:03', '10:07', 'green', 1], ['10:22', '10:37', 'blue', 1], ['10:47', '11:02', 'yellow', 1], ['11:17', '11:21', 'green', 1], ['11:33', '11:37', 'yellow', 1], ['11:45', '12:10', 'white', 1], ['12:18', '12:22', 'white', 1], ['12:30', '12:45', 'blue', 1], ['12:55', '13:20', 'red', 1], ['13:30', '13:55', 'yellow', 1], ['14:05', '14:20', 'green', 1], ['14:26', '14:51', 'white', 1], ['15:01', '15:10', 'blue', 1], ['15:16', '15:31', 'white', 1], ['15:37', '15:43', 'yellow', 1], ['15:53', '16:18', 'red', 1], ['16:33', '16:42', 'red', 1]] },
