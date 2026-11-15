@@ -151,6 +151,10 @@
   .prow > div:first-child { font-size: 14px; color: var(--text2); margin-bottom: 6px; }
   .popt { display: block; width: 100%; text-align: left; border: 1.5px solid var(--sep); background: var(--bg); color: var(--text); border-radius: 12px; padding: 10px 12px; margin-top: 7px; font: inherit; font-size: 15px; line-height: 1.35; }
   .popt.on { border-color: var(--btn); background: color-mix(in srgb, var(--btn) 10%, var(--bg)); }
+  .pqr { display: flex; gap: 6px; align-items: center; margin-top: 10px; } .pqr input { flex: 1; min-width: 0; border: 1px solid var(--sep); border-radius: 10px; padding: 9px 10px; font: inherit; font-size: 15px; background: var(--bg); color: var(--text); }
+  .pqr .pm { border: 0; border-radius: 10px; padding: 9px 10px; background: var(--bg2); font: inherit; font-size: 15px; }
+  .pqp { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; } .pqp .pchip { padding: 6px 10px; font-size: 13px; }
+  .pin { width: 100%; border: 1px solid var(--sep); border-radius: 10px; padding: 10px; font: inherit; background: var(--bg); color: var(--text); }
   .psrch { display: flex; gap: 6px; margin-top: 8px; } .psrch button { flex: 1; border: 0; border-radius: 10px; padding: 11px 4px; font: inherit; font-size: 14px; font-weight: 600; background: var(--bg2); color: var(--text); }
   .pitem { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--sep); cursor: pointer; } .pitem:first-child { border-top: 0; }
   .pitem .ic { font-size: 20px; line-height: 1.2; } .pitem .nm { font-weight: 600; font-size: 16px; } .pitem .sb { font-size: 13px; color: var(--text2); margin-top: 2px; }
@@ -936,8 +940,10 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (f.tour === 'no') o.tour = 1;
     return PP.map(function (x) { return x[0]; }).filter(function (k) { return o[k]; });
   }
-  function sugHooks(f, q) {
+  function sugHooks(f, q, qs) {
     var r = [], qq = q ? '«' + q + '»' : 'вашим основним запитом';
+    var chk = (qs || []).filter(function (x) { return x.q && x.pos; }), bad = chk.filter(function (x) { return x.pos === 'low' || x.pos === 'none'; });
+    if (bad.length >= 2) r.push('Я перевірив ' + chk.length + ' запити, якими вас шукають клієнти, — за ' + bad.length + ' з них вас немає в першій десятці. Наприклад, «' + bad[0].q + '».');
     if (f.pos === 'none') r.push('За запитом ' + qq + ' вас у Google просто не видно — клієнт іде до сусідів.');
     if (f.pos === 'low') r.push('За запитом ' + qq + ' ви нижче 10-го місця — до вас доходить лише той, хто вже вас знає.');
     if (f.site === 'no') r.push('У вас немає сайту — хто шукає вас з телефона, бачить лише чужі сторінки.');
@@ -1109,23 +1115,67 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var nx = b.next_dt && b.status === 'blue' ? '🔵 зустріч ' + wd(d(b.next_dt)) + ' ' + dm(d(b.next_dt)) + ' ' + t(b.next_dt) : (ST[b.status || ''] || '');
     var h = '<div class="dhead"><button class="back" id="bk">‹ ' + (S.prepFrom === 'list' ? 'Підготовка' : 'Назад') + '</button><h1>' + esc(b.name) + '</h1><div class="next">' + esc(nx) + (b.lpr_name ? ' · 👤 ' + esc(b.lpr_name) : '') + '</div>' +
       (b.last_comment ? '<div class="sb" style="margin-top:6px;color:var(--text2);font-size:14px">Минулого разу: «' + esc(b.last_comment) + '»</div>' : '') + '</div>';
-    h += '<div class="pcard"><div class="plbl">1 · Знайди</div><input id="pQ" style="width:100%;border:1px solid var(--sep);border-radius:10px;padding:10px;font:inherit;background:var(--bg);color:var(--text)" placeholder="Ключовий запит, напр. «автомайстерня Оболонь»" value="' + esc(pr0.q || '') + '" autocomplete="off" maxlength="80">' +
-      '<div class="psrch"><button id="sG">🔎 Google</button><button id="sA">✨ Gemini</button><button id="sM">🗺 Карти</button></div></div>';
-    h += '<div class="pcard"><div class="plbl">2 · Факти</div>' + Object.keys(PF).map(function (k) {
+    // запити, якими клієнти шукають такий бізнес: 3–5, кожен — окремо в Картах зі своєю позицією
+    var qs = (pr0.qs || []).map(function (x) { return { q: x.q, pos: x.pos || '' }; });
+    if (!qs.length && pr0.q) qs.push({ q: pr0.q, pos: pr0.pos || '' });
+    while (qs.length < 3) qs.push({ q: '', pos: '' });
+    h += '<div class="pcard"><div class="plbl">1 · Хто це</div><input id="pWho" class="pin" placeholder="Що це і де, напр. «СТО, Чернівці»" value="' + esc(pr0.who || '') + '" autocomplete="off" maxlength="60">' +
+      '<div class="psrch"><button id="sG">🔎 Google</button><button id="sA">✨ Gemini</button></div>' +
+      '<div class="pcnt" style="text-align:left">Шукай за назвою. Gemini збере факти і підкаже запити, якими цей бізнес шукають клієнти.</div></div>';
+    h += '<div class="pcard"><div class="plbl">2 · Як його шукають — 3–5 запитів у Картах</div><div id="pQs"></div>' +
+      '<button class="addbtn" id="pQAdd" style="width:100%;margin:10px 0 0">＋ ще запит</button><div class="pcnt" id="pQCnt" style="text-align:left"></div></div>';
+    h += '<div class="pcard"><div class="plbl">3 · Факти</div>' + Object.keys(PF).filter(function (k) { return k !== 'pos'; }).map(function (k) {
       return '<div class="prow"><div>' + PFL[k] + '</div><div class="pchips">' + PF[k].map(function (o) { return '<button class="pchip' + (PBAD[k].indexOf(o[0]) >= 0 ? ' bad' : '') + (f[k] === o[0] ? ' on' : '') + '" data-f="' + k + '" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div></div>';
     }).join('') + '</div>';
-    h += '<div class="pcard"><div class="plbl">3 · Пропонуємо</div><div class="pchips" id="pProd"></div><div class="pcnt" id="pWhy" style="text-align:left"></div></div>';
-    h += '<div class="pcard"><div class="plbl">4 · Перше речення — з нього почнеш</div><div id="pHooks"></div>' +
+    h += '<div class="pcard"><div class="plbl">4 · Пропонуємо</div><div class="pchips" id="pProd"></div><div class="pcnt" id="pWhy" style="text-align:left"></div></div>';
+    h += '<div class="pcard"><div class="plbl">5 · Перше речення — з нього почнеш</div><div id="pHooks"></div>' +
       '<textarea id="pHook" maxlength="220" rows="3" style="margin-top:8px" placeholder="Обери варіант вище і підправ — або напиши своє">' + esc(pr0.hook || '') + '</textarea><div class="pcnt" id="pCnt"></div>' +
       '<details class="parg"' + (pr0.arg ? ' open' : '') + '><summary>Аргумент повністю (необовʼязково)</summary><textarea id="pArg" maxlength="600" rows="4" style="margin-top:6px" placeholder="Що ще скажеш, якщо зацікавиться">' + esc(pr0.arg || '') + '</textarea></details></div>';
     h += '<button class="save" id="pSave">✅ Готово</button><div class="msg" id="pMsg"></div><div style="height:24px"></div>';
     el.innerHTML = h;
     $('#bk').onclick = function () { prepBack(); };
-    function q() { return $('#pQ').value.trim(); }
-    $('#sG').onclick = function () { openLnk('https://www.google.com/search?q=' + encodeURIComponent(b.name + (q() ? ' ' + q() : ''))); };
-    $('#sM').onclick = function () { openLnk('https://www.google.com/maps/search/' + encodeURIComponent(q() || b.name)); };
+    function who() { return $('#pWho').value.trim(); }
+    var POSR = { none: 0, low: 1, top10: 2, top3: 3 };
+    // найслабша перевірена позиція — з неї й починаємо розмову
+    function worst() { var w = null; qs.forEach(function (x) { if (x.q && x.pos && (!w || POSR[x.pos] < POSR[w.pos])) w = x; }); return w; }
+    function q() { var w = worst(); return w ? w.q : ''; }
+    function syncPos() { var w = worst(); if (w) f.pos = w.pos; else delete f.pos; }
+    function drawQs() {
+      $('#pQs').innerHTML = qs.map(function (x, i) {
+        return '<div class="pqr"><input data-qi="' + i + '" value="' + esc(x.q) + '" placeholder="' + (i === 0 ? 'напр. «СТО Чернівці»' : i === 1 ? 'напр. «шиномонтаж Садгора»' : 'ще один запит') + '" maxlength="60" autocomplete="off"><button class="pm" data-qm="' + i + '">🗺</button></div>' +
+          '<div class="pqp">' + PF.pos.map(function (o) { return '<button class="pchip' + (PBAD.pos.indexOf(o[0]) >= 0 ? ' bad' : '') + (x.pos === o[0] ? ' on' : '') + '" data-qp="' + i + '" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>';
+      }).join('');
+      var n = qs.filter(function (x) { return x.q && x.pos; }).length;
+      $('#pQCnt').textContent = 'Перевірено ' + n + ' з 3–5' + (n >= 3 ? ' ✅' : '') + '. Кожен запит — 🗺, знайди бізнес у видачі й відміть місце.';
+      $('#pQAdd').style.display = qs.length >= 5 ? 'none' : '';
+      $('#pQs').querySelectorAll('[data-qi]').forEach(function (inp) {
+        // з Gemini вставляють кілька рядків — поле вводу губить переноси, тож ловимо саму вставку
+        inp.onpaste = function (ev) {
+          var t = ((ev.clipboardData || window.clipboardData) || { getData: function () { return ''; } }).getData('text') || '';
+          if (!/[\n,;]/.test(t.trim())) return;
+          ev.preventDefault(); inp.oninput(t);
+        };
+        inp.oninput = function (pasted) {
+          var i = +inp.dataset.qi, v = typeof pasted === 'string' ? pasted : inp.value;
+          // вставили кілька запитів разом (з Gemini) — розкладаємо по рядках
+          if (/[\n,;]/.test(v)) {
+            var parts = v.split(/[\n,;]+/).map(function (x) { return x.replace(/^[\s\d.)•*-]+/, '').replace(/[«»"]/g, '').trim(); }).filter(Boolean);
+            qs.splice(i, 1); parts.reverse().forEach(function (x) { qs.splice(i, 0, { q: x.slice(0, 60), pos: '' }); });
+            qs = qs.filter(function (x, j) { return x.q || j < 3; }).slice(0, 5); while (qs.length < 3) qs.push({ q: '', pos: '' });
+            drawQs(); syncPos(); drawProd(); drawHooks(); return;
+          }
+          qs[i].q = v.trim(); syncPos(); drawHooks();
+        };
+      });
+      $('#pQs').querySelectorAll('[data-qm]').forEach(function (bt) { bt.onclick = function () { var x = qs[+bt.dataset.qm]; haptic(); openLnk('https://www.google.com/maps/search/' + encodeURIComponent(x.q || (b.name + (who() ? ' ' + who() : '')))); }; });
+      $('#pQs').querySelectorAll('[data-qp]').forEach(function (bt) {
+        bt.onclick = function () { haptic(); var x = qs[+bt.dataset.qp]; x.pos = x.pos === bt.dataset.v ? '' : bt.dataset.v; syncPos(); drawQs(); drawProd(); drawHooks(); };
+      });
+    }
+    $('#pQAdd').onclick = function () { if (qs.length < 5) { qs.push({ q: '', pos: '' }); drawQs(); var l = $('#pQs').querySelectorAll('[data-qi]'); l[l.length - 1].focus(); } };
+    $('#sG').onclick = function () { openLnk('https://www.google.com/search?q=' + encodeURIComponent(b.name + (who() ? ' ' + who() : ''))); };
     $('#sA').onclick = function () {
-      var pr = 'Що ти знаєш про бізнес «' + b.name + '»' + (q() ? ' (' + q() + ')' : '') + '? Сайт і чи він зручний з телефона, відгуки в Google і чи відповідають на них, соцмережі, профіль у Google Картах: що в ньому слабке і що варто покращити.';
+      var pr = 'Бізнес «' + b.name + '»' + (who() ? ' (' + who() + ')' : '') + '.\n1) Що про нього відомо: сайт і чи зручний він з телефона, відгуки в Google і чи відповідають на них, соцмережі, профіль у Google Картах (підтверджений? фото? 3D-тур?) — що в цьому слабке.\n2) Дай 5 коротких запитів, якими клієнти в цьому місті шукають такий бізнес у Google Картах — по одному в рядку, без нумерації.';
       var ok = copyTxt(pr);
       try { tg.showAlert(ok ? 'Запит для Gemini скопійовано — встав його там.' : 'Скопіюй запит:\n\n' + pr, function () { openLnk('https://gemini.google.com/app'); }); } catch (e) { openLnk('https://gemini.google.com/app'); }
     };
@@ -1137,7 +1187,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     }
     function drawHooks() {
       var cur = $('#pHook').value.trim();
-      $('#pHooks').innerHTML = Object.keys(f).length ? sugHooks(f, q()).map(function (x) { return '<button class="popt' + (cur === x ? ' on' : '') + '">' + esc(x) + '</button>'; }).join('') : '<div class="pcnt" style="text-align:left">відміть факти — і тут зʼявляться готові варіанти</div>';
+      $('#pHooks').innerHTML = Object.keys(f).length ? sugHooks(f, q(), qs).map(function (x) { return '<button class="popt' + (cur === x ? ' on' : '') + '">' + esc(x) + '</button>'; }).join('') : '<div class="pcnt" style="text-align:left">відміть факти — і тут зʼявляться готові варіанти</div>';
       $('#pHooks').querySelectorAll('.popt').forEach(function (bt) { bt.onclick = function () { haptic(); $('#pHook').value = bt.textContent; cnt(); drawHooks(); }; });
     }
     function cnt() { var n = $('#pHook').value.length; $('#pCnt').textContent = n + ' / 220'; }
@@ -1149,12 +1199,14 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         drawProd(); drawHooks();
       };
     });
-    $('#pQ').oninput = function () { drawHooks(); };
+    syncPos(); drawQs();
     $('#pHook').oninput = function () { cnt(); };
     drawProd(); drawHooks(); cnt();
     $('#pSave').onclick = function () {
       var btn = $('#pSave'), msg = $('#pMsg');
-      var prep = { q: q(), hook: $('#pHook').value.trim(), arg: $('#pArg').value.trim(), prod: PP.map(function (x) { return x[0]; }).filter(function (k) { return prod[k]; }) };
+      var chk = qs.filter(function (x) { return x.q && x.pos; });
+      if (chk.length < 3 && !btn.dataset.ok) { btn.dataset.ok = '1'; msg.className = 'msg err'; msg.textContent = 'Перевірено ' + chk.length + ' запит(и) з 3. Перевір ще або натисни «Готово» ще раз, щоб зберегти так.'; return; }
+      var prep = { q: q(), who: who(), qs: qs.filter(function (x) { return x.q; }).map(function (x) { return { q: x.q, pos: x.pos }; }), hook: $('#pHook').value.trim(), arg: $('#pArg').value.trim(), prod: PP.map(function (x) { return x[0]; }).filter(function (k) { return prod[k]; }) };
       Object.keys(f).forEach(function (k) { prep[k] = f[k]; });
       btn.disabled = true; btn.textContent = 'Зберігаю…'; msg.className = 'msg'; msg.textContent = '';
       api('prep_save', { id: b.id, prep: prep, date: S.prep ? S.prep.date : '' }).then(function (r) {
