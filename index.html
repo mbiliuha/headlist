@@ -1016,7 +1016,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         (x.st !== 'wait' && x.st !== 'gone' ? ' · 🚪 ' + x.doors + ' · 🤝 ' + x.lpr : '') + (x.date !== r.today ? ' · ' + wd(x.date) + ' ' + dm(x.date) : '') + '</div>' +
         (dec ? '<div class="crow2"><button class="y" data-y="' + esc(x.username) + '">✅ Беремо стажером</button><button class="n" data-n="' + esc(x.username) + '">❌ Не беремо</button></div>' : '') + '</div>';
     }).join('') + '</div>';
-    h += '<div class="msg" style="margin:12px 16px;line-height:1.45">Записи кандидата видно в тебе в «Команда». О 18:00 бот спитає, чи береш його стажером, о 22:00 доступ кандидата закривається сам. «Не беремо» — його бізнеси переходять у твій хед-лист.</div><div style="height:24px"></div>';
+    h += '<div class="msg" style="margin:12px 16px;line-height:1.45">Записи кандидата видно в тебе в «Команда». О 18:00 бот спитає, чи береш його стажером, о 20:00 доступ кандидата закривається сам. «Не беремо» — його бізнеси переходять у твій хед-лист.</div><div style="height:24px"></div>';
     el.innerHTML = h;
     $('#bk').onclick = function () { closeCand(); };
     $('#cNew').onclick = function () {
