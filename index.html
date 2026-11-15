@@ -516,7 +516,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     else if (sel !== '*' && !byId[sel]) sel = '*';
     S.office = sel;
     var who = $('#who');
-    if (S.multiOff && sel !== '*') { who.className = 'who bk'; who.textContent = '‹ Офіс ' + byId[sel].name; who.onclick = function () { setOffice('*'); }; }
+    if (S.multiOff && sel !== '*') { who.className = 'who bk'; who.textContent = '‹ ' + (byId[sel].code ? byId[sel].code + ' · ' + (byId[sel].city || byId[sel].name) : 'Офіс ' + byId[sel].name); who.onclick = function () { setOffice('*'); }; }
     else { who.className = 'who'; who.textContent = 'Команда'; who.onclick = null; }
     syncBack();
     function inOff(id) { return ag.filter(function (a) { return (a.office || '') === id; }); }
@@ -547,15 +547,15 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     }
     var h = '';
     if (S.multiOff) h += '<div class="ochips">' + [{ id: '*', name: 'Усі' }].concat(offs).map(function (o) {
-      return '<button data-o="' + esc(o.id) + '"' + (o.id === sel ? ' class="on"' : '') + '>' + esc(o.name) + '</button>'; }).join('') + '</div>';
+      return '<button data-o="' + esc(o.id) + '"' + (o.id === sel ? ' class="on"' : '') + '>' + esc(o.code || o.name) + '</button>'; }).join('') + '</div>';
     if (sel === '*' && S.multiOff) {
       h += sumLine(ag);
       offs.forEach(function (o) {
         var list = inOff(o.id), d = 0, l = 0, inn = 0, ov = 0, pd = 0, pt = 0;
         list.forEach(function (a) { d += a.doors; l += a.lpr; if (a.open) inn++; ov += a.overdue || 0; if (a.prep) { pd += a.prep[0]; pt += a.prep[1]; } });
-        var par = o.parent && byId[o.parent] ? byId[o.parent].name : '';
-        h += '<div class="ocard" data-o="' + esc(o.id) + '"><div class="otop">' + ring(d, list.length * n.doors, 72) + '<div class="oinfo"><div class="on">' + (o.id ? 'Офіс ' : '') + esc(o.name) + '</div>' +
-          '<div class="od">' + (o.code ? esc(o.code) + ' · ' : '') + list.length + ' ' + plural(list.length, 'людина', 'людини', 'людей') + (par ? ' · відкрив ' + esc(par) : '') + '</div>' +
+        var par = o.parent && byId[o.parent] ? (byId[o.parent].code || byId[o.parent].name) : '';
+        h += '<div class="ocard" data-o="' + esc(o.id) + '"><div class="otop">' + ring(d, list.length * n.doors, 72) + '<div class="oinfo"><div class="on">' + (o.code ? esc(o.code) + ' · ' + esc(o.city || o.name) : (o.id ? 'Офіс ' : '') + esc(o.name)) + '</div>' +
+          '<div class="od">' + (o.code && o.city ? esc(o.name) + ' · ' : '') + list.length + ' ' + plural(list.length, 'людина', 'людини', 'людей') + (par ? ' · відкрив ' + esc(par) : '') + '</div>' +
           '<div class="os">🤝 ' + l + '/' + list.length * n.lpr + (inn ? ' · <b style="color:var(--green-t)">● ' + inn + ' у дверях</b>' : '') + (ov ? ' · <b style="color:var(--red-t)">⏰ ' + ov + '</b>' : '') + (pt ? ' · <b' + (pd >= pt ? ' style="color:var(--green-t)"' : pLate ? ' style="color:var(--red-t)"' : '') + '>🎯 ' + pd + '/' + pt + '</b>' : '') + '</div></div><span class="chev">›</span></div>' +
           '<div class="oav">' + list.map(function (a) {
             var c = a.open ? 'in' : a.overdue ? 'ov' : a.doors ? 'wk' : '';
@@ -1338,13 +1338,22 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     h += '<div class="group"><div class="gtitle"><span>Діють зараз</span><span>' + act.length + '</span></div><div class="list">' +
       (act.length ? act.map(grantRow).join('') : '<div class="empty">Ніхто нічого не бачить, крім своїх даних</div>') + '</div></div>';
     if (old.length) h += '<div class="group"><div class="gtitle"><span>Закінчились (14 днів)</span><span>' + old.length + '</span></div><div class="list">' + old.map(grantRow).join('') + '</div></div>';
+    if (A.join) h += '<div class="pcard" style="margin:12px 16px"><div class="cbig">🔗 ' + esc(A.join.name) + '</div>' + qrHtml(A.join.link) +
+      '<div class="chint">Дай відсканувати QR камерою телефона цієї людини або надішли їй посилання — відкриється бот, вона натисне «Почати» і одразу в хед-листі. Посилання одноразове, діє до ' + esc(fmtUntil(A.join.until)) + '.</div>' +
+      '<div class="crow2"><button id="jShare">📤 Надіслати</button><button id="jCopy">📋 Копіювати</button></div><button class="addbtn" style="width:100%;margin:8px 0 0" id="jClose">Готово</button></div>';
     h += A.person ? personForm(r) : '<button class="addbtn" id="pAdd">＋ Додати людину</button>';
     h += '<div class="group"><div class="gtitle"><span>' + (r.owner ? 'Люди' : 'Мої люди') + '</span><span>' + r.people.length + '</span></div><div class="list">' + r.people.map(personRow).join('') + '</div></div><div style="height:24px"></div>';
     $('#main').innerHTML = h;
     var ga = $('#gAdd'); if (ga) ga.onclick = function () { A.form = { level: 'view', term: '1h' }; drawAdmin(); };
-    var pa = $('#pAdd'); if (pa) pa.onclick = function () { A.person = { role: r.owner ? 'viewer' : 'agent', active: true, isNew: true, lead: '' }; drawAdmin(); };
+    if (A.join) {
+      var jl = A.join.link;
+      $('#jShare').onclick = function () { haptic(); var u = 'https://t.me/share/url?url=' + encodeURIComponent(jl) + '&text=' + encodeURIComponent('Твій вхід у хед-лист Кьюб — відкрий і натисни «Почати»: '); try { if (tg && tg.openTelegramLink) return tg.openTelegramLink(u); } catch (e) {} openLnk(u); };
+      $('#jCopy').onclick = function () { haptic(); var ok = copyTxt(jl); try { tg.showAlert(ok ? 'Посилання скопійовано.' : jl); } catch (e) {} };
+      $('#jClose').onclick = function () { A.join = null; drawAdmin(); };
+    }
+    var pa = $('#pAdd'); if (pa) pa.onclick = function () { A.person = { role: 'agent', active: true, isNew: true, lead: '' }; drawAdmin(); };
     document.querySelectorAll('[data-revoke]').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); revoke(b.dataset.revoke); }; });
-    document.querySelectorAll('[data-person]').forEach(function (el) { el.onclick = function () { var p = ppl[el.dataset.person]; A.person = { username: p.username, name: p.name, role: p.role, office: p.office, active: p.active, lead: p.lead || '' }; drawAdmin(); window.scrollTo(0, 0); }; });
+    document.querySelectorAll('[data-person]').forEach(function (el) { el.onclick = function () { var p = ppl[el.dataset.person]; A.person = { username: p.username, name: p.name, role: p.role, office: p.office, active: p.active, lead: p.lead || '', linked: p.linked }; A.join = null; drawAdmin(); window.scrollTo(0, 0); }; });
     bindForms();
   }
   function grantRow(g) {
@@ -1356,14 +1365,14 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   var ROLE = { agent: 'агент', instructor: 'інструктор', manager: 'менеджер', viewer: 'перегляд', owner: 'власник' };
   function personRow(p) {
     return '<div class="item' + (p.active ? '' : ' muted') + '" data-person="' + esc(p.username) + '"><div class="body"><div class="name">' + esc(p.name || p.username) + '</div>' +
-      '<div class="sub">@' + esc(p.username) + ' · ' + esc(ROLE[p.role] || p.role) + (p.office ? ' · ' + esc(p.office) : '') + (A.data && p.lead_name && (A.data.owner || p.lead !== A.data.me) ? ' · 👤 ' + esc(p.lead_name) : '') + ' · ' +
-      (p.active ? (p.linked ? '✅ у боті' : '⏳ ще не натиснув /start') : '🔒 вимкнено') + '</div></div></div>';
+      '<div class="sub">' + (p.username.charAt(0) === '_' ? 'без ніка' : '@' + esc(p.username)) + ' · ' + esc(ROLE[p.role] || p.role) + (p.office ? ' · ' + esc(p.office) : '') + (A.data && p.lead_name && (A.data.owner || p.lead !== A.data.me) ? ' · 👤 ' + esc(p.lead_name) : '') + ' · ' +
+      (p.active ? (p.linked ? '✅ у боті' : '⏳ ще не підключився') : '🔒 вимкнено') + '</div></div></div>';
   }
   function opt(v, l, sel) { return '<option value="' + esc(v) + '"' + (v === sel ? ' selected' : '') + '>' + esc(l) + '</option>'; }
   function grantForm(r) {
     var f = A.form;
     var whoOpts = r.people.filter(function (p) { return p.active && p.role !== 'owner'; });
-    var tgtOpts = r.people.filter(function (p) { return p.active && p.role === 'agent'; });
+    var tgtOpts = r.people.filter(function (p) { return p.active && (p.role === 'agent' || p.role === 'instructor' || (r.owner && p.role === 'manager')); });
     if (!f.who && whoOpts[0]) f.who = whoOpts[0].username;
     if (!f.target) f.target = tgtOpts[0] ? tgtOpts[0].username : (r.owner ? '*' : '');
     var offices = {}; tgtOpts.forEach(function (p) { if (p.office) offices[p.office] = 1; });
@@ -1376,16 +1385,19 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   }
   function personForm(r) {
     var p = A.person;
-    return '<div class="form"><div class="field"><label>Нік Telegram</label><input id="pUser" placeholder="без @" value="' + esc(p.username || '') + '"' + (p.isNew ? '' : ' disabled') + '></div>' +
+    return '<div class="form"><div class="field"><label>Нік Telegram</label><input id="pUser" placeholder="без @ · немає ніка — залиш порожнім" value="' + esc(p.username && p.username.charAt(0) === '_' ? 'без ніка' : p.username || '') + '"' + (p.isNew ? '' : ' disabled') + '></div>' +
       '<div class="field"><label>Імʼя</label><input id="pName" value="' + esc(p.name || '') + '"></div>' +
       '<div class="field"><label>Роль</label><select id="pRole">' + r.roles.map(function (x) { return opt(x.id, x.name, p.role); }).join('') + '</select></div>' +
-      '<div class="field"><label>Офіс</label><input id="pOffice" placeholder="необовʼязково" value="' + esc(p.office || '') + '"></div>' +
-      (r.owner ? '<div class="field"><label>Керівник (менеджер)</label><select id="pLead">' + opt('', '— без керівника —', p.lead || '') +
+      '<div class="msg" style="margin:-4px 0 10px;text-align:left">Агент і стажер — «агент». Інструктор — теж ходить у поля і бачить своїх стажерів. Менеджер — свій хед-лист + усі люди офісу. Перегляд — лише дивиться.</div>' +
+      '<div class="field"><label>Офіс</label><input id="pOffice" list="pOffList" autocapitalize="characters" placeholder="' + (p.isNew ? 'як у керівника' : 'напр. KV1') + '" value="' + esc(p.office || '') + '"><datalist id="pOffList">' +
+        (r.offices || []).map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist></div>' +
+      (r.owner ? '<div class="field"><label>Керівник — чий офіс</label><select id="pLead">' + opt('', '— без керівника —', p.lead || '') +
         (r.managers || []).map(function (m) { return opt(m.username, m.name, p.lead || ''); }).join('') + '</select></div>' : '') +
       (p.isNew ? '' : '<div class="seg" id="pAct"><button data-v="1" class="' + (p.active ? 'on' : '') + '">✅ Активний</button><button data-v="0" class="' + (!p.active ? 'on' : '') + '">🔒 Вимкнути</button></div>') +
-      (p.isNew ? '' : '<button class="addbtn" style="width:100%;margin:4px 0 0" id="pReset">🔄 Скинути привʼязку Telegram (людина змінила акаунт)</button>') +
+      (!p.isNew && p.active && !p.linked ? '<button class="addbtn" style="width:100%;margin:4px 0 0" id="pJoin">🔗 Посилання / QR для входу</button>' : '') +
+      (p.isNew || !p.linked ? '' : '<button class="addbtn" style="width:100%;margin:4px 0 0" id="pReset">🔄 Скинути привʼязку Telegram (людина змінила акаунт)</button>') +
       '<button class="save" id="pSave">' + (p.isNew ? 'Додати' : 'Зберегти') + '</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="pCancel">Скасувати</button>' +
-      '<div class="msg" id="pMsg">' + (p.isNew ? (r.owner ? 'Після додавання людина пише боту /start. Менеджер-керівник бачить своїх агентів одразу; решті — через «Видати доступ».' : 'Людина закріпиться за тобою: її хед-лист бачиш лише ти і власник. Після додавання вона пише боту /start.') : '') + '</div></div>';
+      '<div class="msg" id="pMsg">' + (p.isNew ? (r.owner ? 'Після додавання людина відкриває @cube_headlist_bot і тисне «Почати». Без ніка — покажу QR для входу. Менеджер-керівник бачить своїх людей одразу; решті — через «Видати доступ».' : 'Людина закріпиться за тобою: її хед-лист бачиш лише ти і власник. Після додавання вона відкриває @cube_headlist_bot і тисне «Почати» (без ніка — покажу QR для входу).') : '') + '</div></div>';
   }
   function seg(id, cb) { var el = $(id); if (!el) return; el.querySelectorAll('button').forEach(function (b) { b.onclick = function () { el.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); }); haptic(); cb(b.dataset.v); }; }); }
   function bindForms() {
@@ -1404,6 +1416,11 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (A.person) {
       seg('#pAct', function (v) { A.person.active = v === '1'; });
       $('#pCancel').onclick = function () { A.person = null; drawAdmin(); };
+      if ($('#pJoin')) $('#pJoin').onclick = function () {
+        var p = A.person, b = this; b.disabled = true;
+        api('join_link', { username: p.username }).then(function (r) { if (r && r.ok === false) throw new Error(r.error); haptic('medium'); A.join = { name: p.name || p.username, link: r.join.link, until: r.join.until }; A.person = null; drawAdmin(); window.scrollTo(0, 0); })
+          .catch(function (e) { b.disabled = false; $('#pMsg').className = 'msg err'; $('#pMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
+      };
       if ($('#pReset')) $('#pReset').onclick = function () {
         var p = A.person, go = function (ok) {
           if (!ok) return;
@@ -1416,9 +1433,10 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       $('#pSave').onclick = function () {
         var p = A.person, b = this;
         var body = { username: p.isNew ? $('#pUser').value : p.username, name: $('#pName').value, role: $('#pRole').value, office: $('#pOffice').value, active: p.active !== false };
+        if (p.isNew && !String(body.username).trim()) { if (!String(body.name).trim()) { $('#pMsg').className = 'msg err'; $('#pMsg').textContent = 'Вкажи імʼя — без ніка людину впізнаєш лише за ним.'; return; } body.nonick = true; }
         if ($('#pLead')) body.lead = $('#pLead').value;
         b.disabled = true; $('#pMsg').className = 'msg'; $('#pMsg').textContent = 'Зберігаю…';
-        api('person', body).then(function (r) { if (r && r.ok === false) throw new Error(r.error); haptic('medium'); A.person = null; renderAdmin(); })
+        api('person', body).then(function (r) { if (r && r.ok === false) throw new Error(r.error); haptic('medium'); A.join = r && r.join ? { name: body.name || body.username, link: r.join.link, until: r.join.until } : null; A.person = null; renderAdmin(); })
           .catch(function (e) { b.disabled = false; $('#pMsg').className = 'msg err'; $('#pMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
       };
     }
@@ -1449,7 +1467,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var ADM = /admin=1/.test(location.search);
     if (action === 'me') return ADM ? { me: { username: 'owner', name: 'Микола', role: 'owner', admin: true }, agents: [{ username: 'owner', name: 'Микола', level: 'edit' }, { username: 'matei', name: 'Матей', level: 'edit' }, { username: 'olga', name: 'Ольга', level: 'edit' }], now: now }
       : { me: { username: 'matei', name: 'Матей', role: 'agent' }, agents: [{ username: 'matei', name: 'Матей', level: 'edit' }], now: now };
-    if (action === 'admin') return { now: now, roles: [{ id: 'agent', name: 'агент' }, { id: 'instructor', name: 'інструктор' }, { id: 'manager', name: 'менеджер' }, { id: 'viewer', name: 'перегляд' }, { id: 'owner', name: 'власник' }],
+    if (action === 'join_link' || action === 'person') return { ok: true, join: { link: 'https://t.me/cube_headlist_bot?start=j_demo123abc', until: '2026-11-22T23:59' } };
+    if (action === 'admin') return { now: now, offices: ['CVC', 'KV1', 'KV3'], roles: [{ id: 'agent', name: 'агент' }, { id: 'instructor', name: 'інструктор' }, { id: 'manager', name: 'менеджер' }, { id: 'viewer', name: 'перегляд' }, { id: 'owner', name: 'власник' }],
       people: [{ username: 'owner', name: 'Микола', role: 'owner', active: true, linked: true }, { username: 'matei', name: 'Матей', role: 'agent', office: 'CV', active: true, linked: true },
         { username: 'olga', name: 'Ольга (стажер)', role: 'agent', office: 'CV', active: true, linked: false }, { username: 'ivan_instr', name: 'Іван', role: 'instructor', office: 'CV', active: true, linked: true },
         { username: 'shakhmatov', name: 'Шахматов', role: 'manager', office: 'CV', active: true, linked: true }],
@@ -1459,7 +1478,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (action === 'list') return { now: now, today: { doors: 12, lpr: 5, quality: 3, repeats: 2 }, week: { lpr: 21, doors: 64 },
       norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 }, open: { bizName: 'Піцерія Наполі', start: '2026-11-03T15:32' }, businesses: B };
     if (action === 'team') { var td = nowKyiv().slice(0, 10); return { now: td + 'T15:40', today: td, norms: { doors: 20, doorsAlarm: 15, lpr: 10, lprAlarm: 5, weekLpr: 50, qualityMin: 20 },
-      offices: [{ id: 'evgen', name: 'Шахматов', code: 'KV1', parent: '', mine: true }, { id: 'sofia', name: 'Софія', code: 'KV3', parent: 'evgen' }], agents: [
+      offices: [{ id: 'evgen', name: 'Шахматов', code: 'KV1', city: 'Київ', parent: '', mine: true }, { id: 'sofia', name: 'Софія', code: 'KV3', parent: 'evgen' }], agents: [
       { username: 'evgen', name: 'Євгеній', role: 'manager', self: true, office: 'evgen', doors: 5, lpr: 3, quality: 1, first: '10:15', last: '13:08', week_lpr: 12, biz: 30, open_biz: 9, overdue: 0, today_left: 1, open: null, seq: [['10:15', '10:40', 'green', 1], ['10:50', '10:59', 'yellow', 1], ['11:14', '11:18', 'blue', 1], ['12:50', '12:56', 'white', 1], ['13:02', '13:08', 'red', 1]] },
       { username: 'matei', name: 'Матей', role: 'agent', office: 'evgen', doors: 11, lpr: 6, quality: 3, first: '10:06', last: '15:13', week_lpr: 24, biz: 30, open_biz: 9, overdue: 1, today_left: 1, prep: [1, 3], pw: [9, 5, 3, 1], open: { bizName: 'Піцерія Наполі', start: td + 'T15:26' }, seq: [['10:06', '10:10', 'green', 1], ['10:20', '10:35', 'yellow', 1], ['10:43', '10:58', 'blue', 1], ['11:13', '11:17', 'white', 1], ['11:32', '11:38', 'red', 1], ['13:08', '13:14', 'white', 1], ['13:26', '13:35', 'yellow', 1], ['13:43', '13:58', 'white', 1], ['14:06', '14:10', 'blue', 1], ['14:18', '14:43', 'red', 1], ['14:58', '15:13', 'yellow', 1]] },
       { username: 'olena', name: 'Олена', role: 'agent', office: 'evgen', doors: 14, lpr: 9, quality: 4, first: '10:00', last: '13:53', week_lpr: 36, biz: 30, open_biz: 9, overdue: 0, today_left: 1, prep: [2, 2], pw: [11, 10, 6, 0], open: null, seq: [['10:00', '10:06', 'green', 1], ['10:14', '10:18', 'green', 1], ['10:24', '10:30', 'yellow', 1], ['10:38', '10:44', 'blue', 1], ['10:52', '11:01', 'white', 1], ['11:11', '11:17', 'white', 1], ['11:32', '11:38', 'red', 1], ['11:46', '11:52', 'blue', 1], ['12:04', '12:13', 'yellow', 1], ['12:19', '12:28', 'yellow', 1], ['12:40', '12:46', 'white', 1], ['12:54', '13:03', 'white', 1], ['13:09', '13:18', 'yellow', 1], ['13:28', '13:53', 'blue', 1]] },
