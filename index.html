@@ -964,6 +964,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     return '<div class="pcard"><div class="plbl">🎯 Скажи першим</div><div class="phook">' + esc(pr.hook) + '</div></div>' +
       (prod ? '<div class="pcard"><div class="plbl">Пропонуємо</div><div class="pchips">' + prod + '</div></div>' : '') +
       (bad.length ? '<div class="pcard"><div class="plbl">Факти</div><div class="pfacts">' + bad.join(' · ') + '</div></div>' : '') +
+      (pr.note ? '<div class="pcard"><div class="plbl">📝 Для себе</div><div style="font-size:15px;line-height:1.4;white-space:pre-wrap">' + esc(pr.note) + '</div></div>' : '') +
       (pr.arg ? '<div class="pcard"><details class="parg"><summary>Аргумент повністю</summary><div style="margin-top:6px;font-size:15px;line-height:1.4">' + esc(pr.arg) + '</div></details></div>' : '');
   }
   function loadPrep() {
@@ -1130,7 +1131,9 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     h += '<div class="pcard"><div class="plbl">4 · Пропонуємо</div><div class="pchips" id="pProd"></div><div class="pcnt" id="pWhy" style="text-align:left"></div></div>';
     h += '<div class="pcard"><div class="plbl">5 · Перше речення — з нього почнеш</div><div id="pHooks"></div>' +
       '<textarea id="pHook" maxlength="220" rows="3" style="margin-top:8px" placeholder="Обери варіант вище і підправ — або напиши своє">' + esc(pr0.hook || '') + '</textarea><div class="pcnt" id="pCnt"></div>' +
-      '<details class="parg"' + (pr0.arg ? ' open' : '') + '><summary>Аргумент повністю (необовʼязково)</summary><textarea id="pArg" maxlength="600" rows="4" style="margin-top:6px" placeholder="Що ще скажеш, якщо зацікавиться: інші локації і що з ними, конкуренти поруч, цифри">' + esc(pr0.arg || '') + '</textarea></details></div>';
+      '<details class="parg"' + (pr0.arg ? ' open' : '') + '><summary>Аргумент повністю (необовʼязково)</summary><textarea id="pArg" maxlength="600" rows="4" style="margin-top:6px" placeholder="Що ще скажеш, якщо зацікавиться">' + esc(pr0.arg || '') + '</textarea></details></div>';
+    h += '<div class="pcard"><div class="plbl">6 · Для себе — що не забути</div><textarea id="pNote" maxlength="400" rows="3" placeholder="Напр.: є ще 2 точки — вул. Головна 12 і Садгора; обовʼязково узгодити, хто вирішує за всі">' + esc(pr0.note || '') + '</textarea>' +
+      '<div class="pcnt" style="text-align:left">Бот нагадає це, коли зайдеш у двері.</div></div>';
     h += '<button class="save" id="pSave">✅ Готово</button><div class="msg" id="pMsg"></div><div style="height:24px"></div>';
     el.innerHTML = h;
     $('#bk').onclick = function () { prepBack(); };
@@ -1206,7 +1209,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       var btn = $('#pSave'), msg = $('#pMsg');
       var chk = qs.filter(function (x) { return x.q && x.pos; });
       if (chk.length < 3 && !btn.dataset.ok) { btn.dataset.ok = '1'; msg.className = 'msg err'; msg.textContent = 'Перевірено ' + chk.length + ' запит(и) з 3. Перевір ще або натисни «Готово» ще раз, щоб зберегти так.'; return; }
-      var prep = { q: q(), who: who(), qs: qs.filter(function (x) { return x.q; }).map(function (x) { return { q: x.q, pos: x.pos }; }), hook: $('#pHook').value.trim(), arg: $('#pArg').value.trim(), prod: PP.map(function (x) { return x[0]; }).filter(function (k) { return prod[k]; }) };
+      var prep = { q: q(), who: who(), qs: qs.filter(function (x) { return x.q; }).map(function (x) { return { q: x.q, pos: x.pos }; }), hook: $('#pHook').value.trim(), arg: $('#pArg').value.trim(), note: $('#pNote').value.trim(), prod: PP.map(function (x) { return x[0]; }).filter(function (k) { return prod[k]; }) };
       Object.keys(f).forEach(function (k) { prep[k] = f[k]; });
       btn.disabled = true; btn.textContent = 'Зберігаю…'; msg.className = 'msg'; msg.textContent = '';
       api('prep_save', { id: b.id, prep: prep, date: S.prep ? S.prep.date : '' }).then(function (r) {
