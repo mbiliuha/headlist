@@ -360,8 +360,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (DEMO) return Promise.resolve(demo(action, p));
     if (GAS) return new Promise(function (res, rej) {
       google.script.run.withSuccessHandler(function (s) {
-        var r = JSON.parse(s); if (r.ok) res(r.data); else rej(new Error(r.error || 'server'));
-      }).withFailureHandler(function () { rej(new Error('server')); }).miniApi({ api: action, init: INIT, key: KEY, p: p ? JSON.stringify(p) : '' });
+        var r = JSON.parse(s); if (r.ok) res(r.data); else { var ge = new Error(r.error || 'server'); ge.api = true; if (r.detail) ge.detail = r.detail; rej(ge); }
+      }).withFailureHandler(function () { var fe = new Error('server'); fe.api = true; rej(fe); }).miniApi({ api: action, init: INIT, key: KEY, p: p ? JSON.stringify(p) : '' });
     });
     var url = API + '?api=' + action + '&init=' + encodeURIComponent(INIT) + (KEY ? '&key=' + encodeURIComponent(KEY) : '') + (p ? '&p=' + encodeURIComponent(JSON.stringify(p)) : '');
     // зависле зʼєднання не тримає «Завантаження…» вічно: через 20 с вважаємо, що звʼязку нема (повтор запису сервер розпізнає за qid)
@@ -370,7 +370,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     // довгий запис (підготовка з точками, нотатками) — тілом POST: задовга адреса обрізається по дорозі
     if (url.length > 1800) { url = API + '?api=' + action; fo.method = 'POST'; fo.body = JSON.stringify({ init: INIT, key: KEY || '', p: p ? JSON.stringify(p) : '' }); }
     return fetch(url, fo).then(function (r) { clearTimeout(tmo); return r.json(); }, function (e) { clearTimeout(tmo); e.net = true; throw e; }).then(function (r) {
-      if (!r.ok) { var er = new Error(r.error || 'server'); if (r.error === 'busy') er.busy = true; throw er; }   // коротке слово (auth/forbidden/busy) або речення для людини
+      if (!r.ok) { var er = new Error(r.error || 'server'); if (r.error === 'busy') er.busy = true; if (r.detail) er.detail = r.detail; er.api = true; throw er; }   // коротке слово (auth/forbidden/busy) або речення для людини
       return r.data;
     }, function (e) { if (e && e.name === 'SyntaxError') e.net = true; throw e; });   // не JSON (збій Google) = теж «нема звʼязку»
   }
@@ -454,7 +454,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (m === 'busy') return 'Бот зараз зайнятий. Спробуй ще раз за хвилину.';
     if (m === 'bad_request') return 'Запит не дійшов цілим. Онови застосунок і спробуй ще раз.';
     if (e && e.net) return 'Нема звʼязку. Перевір інтернет і спробуй ще раз.';
-    return 'Щось пішло не так на сервері. Спробуй ще раз за хвилину.';
+    if (e && !e.api && /^(TypeError|ReferenceError|RangeError|SyntaxError)$/.test(e.name || '')) return 'Помилка в застосунку: ' + String(e.message || e).slice(0, 120) + '. Надішли скрін менеджеру.';   // збій у самому телефоні, не на сервері
+    return 'Щось пішло не так на сервері. Спробуй ще раз за хвилину.' + (e && e.detail ? ' (' + e.detail + ')' : '');
   }
 
   // ── завантаження ──
