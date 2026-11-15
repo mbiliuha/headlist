@@ -366,7 +366,10 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var url = API + '?api=' + action + '&init=' + encodeURIComponent(INIT) + (KEY ? '&key=' + encodeURIComponent(KEY) : '') + (p ? '&p=' + encodeURIComponent(JSON.stringify(p)) : '');
     // зависле зʼєднання не тримає «Завантаження…» вічно: через 20 с вважаємо, що звʼязку нема (повтор запису сервер розпізнає за qid)
     var ac = window.AbortController ? new AbortController() : null, tmo = setTimeout(function () { try { ac && ac.abort(); } catch (e) {} }, 20000);
-    return fetch(url, ac ? { signal: ac.signal, referrerPolicy: 'no-referrer' } : undefined).then(function (r) { clearTimeout(tmo); return r.json(); }, function (e) { clearTimeout(tmo); e.net = true; throw e; }).then(function (r) {
+    var fo = ac ? { signal: ac.signal, referrerPolicy: 'no-referrer' } : {};
+    // довгий запис (підготовка з точками, нотатками) — тілом POST: задовга адреса обрізається по дорозі
+    if (url.length > 1800) { url = API + '?api=' + action; fo.method = 'POST'; fo.body = JSON.stringify({ init: INIT, key: KEY || '', p: p ? JSON.stringify(p) : '' }); }
+    return fetch(url, fo).then(function (r) { clearTimeout(tmo); return r.json(); }, function (e) { clearTimeout(tmo); e.net = true; throw e; }).then(function (r) {
       if (!r.ok) { var er = new Error(r.error || 'server'); if (r.error === 'busy') er.busy = true; throw er; }   // коротке слово (auth/forbidden/busy) або речення для людини
       return r.data;
     }, function (e) { if (e && e.name === 'SyntaxError') e.net = true; throw e; });   // не JSON (збій Google) = теж «нема звʼязку»
@@ -449,6 +452,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (m === 'not_agent') return 'Тебе немає в списку агентів. Напиши менеджеру.';
     if (m === 'forbidden') return 'Немає доступу.';
     if (m === 'busy') return 'Бот зараз зайнятий. Спробуй ще раз за хвилину.';
+    if (m === 'bad_request') return 'Запит не дійшов цілим. Онови застосунок і спробуй ще раз.';
     if (e && e.net) return 'Нема звʼязку. Перевір інтернет і спробуй ще раз.';
     return 'Щось пішло не так на сервері. Спробуй ще раз за хвилину.';
   }
