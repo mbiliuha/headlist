@@ -943,7 +943,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   function sugHooks(f, q, qs) {
     var r = [], qq = q ? '«' + q + '»' : 'вашим основним запитом';
     var chk = (qs || []).filter(function (x) { return x.q && x.pos; }), bad = chk.filter(function (x) { return x.pos === 'low' || x.pos === 'none'; });
-    if (bad.length >= 2) r.push('Я перевірив ' + chk.length + ' запити, якими вас шукають клієнти, — за ' + bad.length + ' з них вас немає в першій десятці. Наприклад, «' + bad[0].q + '».');
+    if (bad.length >= 2) r.push('Я перевірив ' + chk.length + ' ' + plural(chk.length, 'запит', 'запити', 'запитів') + ', якими вас шукають клієнти, — за ' + bad.length + ' з них вас немає в першій десятці. Наприклад, «' + bad[0].q + '».');
     if (f.pos === 'none') r.push('За запитом ' + qq + ' вас у Google просто не видно — клієнт іде до сусідів.');
     if (f.pos === 'low') r.push('За запитом ' + qq + ' ви нижче 10-го місця — до вас доходить лише той, хто вже вас знає.');
     if (f.site === 'no') r.push('У вас немає сайту — хто шукає вас з телефона, бачить лише чужі сторінки.');
@@ -1130,7 +1130,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     h += '<div class="pcard"><div class="plbl">4 · Пропонуємо</div><div class="pchips" id="pProd"></div><div class="pcnt" id="pWhy" style="text-align:left"></div></div>';
     h += '<div class="pcard"><div class="plbl">5 · Перше речення — з нього почнеш</div><div id="pHooks"></div>' +
       '<textarea id="pHook" maxlength="220" rows="3" style="margin-top:8px" placeholder="Обери варіант вище і підправ — або напиши своє">' + esc(pr0.hook || '') + '</textarea><div class="pcnt" id="pCnt"></div>' +
-      '<details class="parg"' + (pr0.arg ? ' open' : '') + '><summary>Аргумент повністю (необовʼязково)</summary><textarea id="pArg" maxlength="600" rows="4" style="margin-top:6px" placeholder="Що ще скажеш, якщо зацікавиться">' + esc(pr0.arg || '') + '</textarea></details></div>';
+      '<details class="parg"' + (pr0.arg ? ' open' : '') + '><summary>Аргумент повністю (необовʼязково)</summary><textarea id="pArg" maxlength="600" rows="4" style="margin-top:6px" placeholder="Що ще скажеш, якщо зацікавиться: інші локації і що з ними, конкуренти поруч, цифри">' + esc(pr0.arg || '') + '</textarea></details></div>';
     h += '<button class="save" id="pSave">✅ Готово</button><div class="msg" id="pMsg"></div><div style="height:24px"></div>';
     el.innerHTML = h;
     $('#bk').onclick = function () { prepBack(); };
