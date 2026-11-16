@@ -45,8 +45,9 @@
   .stat.pchip { background: rgba(43,125,233,.12); color: var(--link); cursor: pointer; }
   .stat.pchip.ok { background: rgba(52,199,89,.14); color: #1f8a3d; }
   .stat.bad b { color: var(--red-t); }
-  .tabs { display: flex; background: var(--bg2); border-radius: 10px; padding: 3px; }
-  .tab { flex: 1; text-align: center; padding: 9px 4px; min-height: 40px; white-space: nowrap; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--text2); border: 0; background: none; font-family: inherit; }
+  .tabs { display: flex; background: var(--bg2); border-radius: 10px; padding: 3px; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 1 0 auto; text-align: center; padding: 9px 4px; min-height: 40px; white-space: nowrap; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--text2); border: 0; background: none; font-family: inherit; }
   .tab.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
   /* панель «Команда» */
   .who.bk { color: var(--link); cursor: pointer; }
@@ -168,6 +169,23 @@
   .crow2 { display: flex; gap: 8px; } .crow2 button { flex: 1; border: 1px solid var(--sep); background: var(--bg2, var(--bg)); color: var(--link); border-radius: 10px; padding: 10px 6px; min-height: 44px; font: inherit; font-size: 14px; font-weight: 600; }
   .citem { padding: 10px 0; border-top: 1px solid var(--sep); } .citem:first-child { border-top: 0; } .citem .nm { font-weight: 600; } .citem .sb { font-size: 13.5px; color: var(--text2); margin-top: 2px; }
   .citem .crow2 { margin-top: 8px; } .citem .crow2 .y { color: var(--green-t); } .citem .crow2 .n { color: var(--red-t); }
+  .dtot { display: flex; gap: 6px; padding: 10px 12px 0; }
+  .dtot div { flex: 1; background: var(--bg); border-radius: 12px; padding: 8px 10px; font-size: 13px; color: var(--text2); }
+  .dtot b { display: block; font-size: 17px; color: var(--text); margin-top: 2px; }
+  .dgrp { margin: 16px 16px 0; font-size: 13px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .02em; }
+  .dcard { margin: 8px 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--bg); }
+  .dhd { display: flex; align-items: baseline; gap: 8px; }
+  .dhd .nm { font-weight: 600; flex: 1; min-width: 0; }
+  .dsub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .dln { display: flex; align-items: center; gap: 6px; padding: 8px 0 0; }
+  .dln .lb { flex: 1; min-width: 0; font-size: 15px; }
+  .dln .sm { font-weight: 600; white-space: nowrap; margin-right: 2px; }
+  .dck { border: 1.5px solid var(--sep); background: var(--bg); color: var(--text2); border-radius: 16px; padding: 5px 9px; font: inherit; font-size: 13px; white-space: nowrap; }
+  .dck.on { border-color: transparent; background: rgba(52,199,89,.16); color: #1f8a3d; font-weight: 600; }
+  .dall { margin-top: 10px; width: 100%; border: 0; border-radius: 12px; padding: 11px; font: inherit; font-weight: 600; background: var(--btn); color: var(--btn-text); }
+  .dadd { display: flex; gap: 6px; margin-top: 8px; }
+  .dadd input { flex: 1; min-width: 0; border: 1px solid var(--sep); border-radius: 10px; padding: 9px 10px; font: inherit; font-size: 15px; background: var(--bg); color: var(--text); }
+  .dadd button { border: 0; border-radius: 10px; padding: 0 12px; font: inherit; font-weight: 600; background: var(--btn); color: var(--btn-text); }
   .pbtn { display: block; width: calc(100% - 24px); margin: 10px 12px 0; border: 1.5px dashed var(--sep); background: none; color: var(--link); border-radius: 12px; padding: 12px; font: inherit; font-weight: 600; }
   .pcard textarea { width: 100%; border: 1px solid var(--sep); border-radius: 10px; padding: 10px; font: inherit; font-size: 15px; background: var(--bg); color: var(--text); resize: vertical; box-sizing: border-box; }
   details.parg summary { cursor: pointer; color: var(--link); font-weight: 600; font-size: 14px; margin-top: 8px; }
@@ -276,7 +294,7 @@
     <div class="stats" id="stats"></div>
   </header>
   <div class="tabsbar">
-    <div class="tabs" id="tabs"><button class="tab on" data-tab="tasks">Наработки</button><button class="tab" data-tab="day">День</button><button class="tab" data-tab="all">Усі бізнеси</button><button class="tab" data-tab="admin" id="tabAdmin" style="display:none">Доступи</button></div>
+    <div class="tabs" id="tabs"><button class="tab on" data-tab="tasks">Наработки</button><button class="tab" data-tab="day">День</button><button class="tab" data-tab="all">Усі бізнеси</button><button class="tab" data-tab="deals">💰 Договори</button><button class="tab" data-tab="admin" id="tabAdmin" style="display:none">Доступи</button></div>
     <div id="offbar"></div>
   </div>
   <div id="main"><div class="spin">Завантаження…</div></div>
@@ -704,6 +722,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (x.open) html += '<div class="banner" id="openBn" data-start="' + esc(x.open.start) + '">📌 Зараз у візиті з ' + t(x.open.start) + (x.open.bizName ? ': <b>' + esc(x.open.bizName) + '</b>' : '') + ' · ⏱ <b id="openMin">' + dur(Math.max(0, mins(x.open.start, nowKyiv()))) + '</b></div>';
     html += prepBanner();
     if (S.tab === 'day') { $('#main').innerHTML = html + '<div id="dayBox"><div class="spin">Завантаження…</div></div>'; bindPrepBn(); return loadDay(); }
+    if (S.tab === 'deals') { $('#main').innerHTML = '<div id="dealBox"><div class="spin">Завантаження…</div></div>'; return loadDeals(); }
     if (S.tab === 'tasks') html += tasksView(); else html += allView();
     $('#main').innerHTML = html; bindPrepBn();
     var inp = $('#q');
@@ -1003,6 +1022,85 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       }).join('') + '</div>' : '') +
       (pr.note ? '<div class="pcard"><div class="plbl">📝 Для себе</div><div style="font-size:15px;line-height:1.4;white-space:pre-wrap">' + esc(pr.note) + '</div></div>' : '') +
       (pr.arg ? '<div class="pcard"><details class="parg"><summary>Аргумент повністю</summary><div style="margin-top:6px;font-size:15px;line-height:1.4">' + esc(pr.arg) + '</div></details></div>' : '');
+  }
+  // ── 💰 Договори: що клієнти ще не оплатили, за що ще не прийшла ЗП ──
+  var DSVC = { tour: '🎥 3D-тур', serv: '🛠 Обслуговування', verif: '🔁 Верифікація', qr: '⭐ QR', site: '🌐 Сайт', ads: '📍 ADS', other: '📄 Інше' };
+  function money(n) { return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
+  function loadDeals() {
+    if (DEMO) { S.deals = demoDeals(); return drawDeals(); }
+    api('deals', { agent: S.agent }).then(function (r) { S.deals = r; if (S.tab === 'deals') drawDeals(); })
+      .catch(function (e) { var bx = $('#dealBox'); if (bx) bx.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+  }
+  function dealGroup(it) {
+    var L = it.deal ? it.deal.lines : [];
+    if (!L.length) return 'pay';
+    if (L.some(function (l) { return !l.paid; })) return 'pay';
+    return L.some(function (l) { return !l.zp; }) ? 'zp' : 'done';
+  }
+  function drawDeals() {
+    var bx = $('#dealBox'), r = S.deals; if (!bx || !r) return;
+    var ed = r.editable, month = String(r.today || '').slice(0, 7), owe = 0, zpw = 0, zpm = 0;
+    r.items.forEach(function (it) { (it.deal ? it.deal.lines : []).forEach(function (l) { if (!l.paid) owe += l.sum; else if (!l.zp) zpw += l.sum; else if (String(l.zp).slice(0, 7) === month) zpm += l.sum; }); });
+    var h = '<div class="dtot"><div>⏳ Чекаю оплату<b>' + money(owe) + '</b></div><div>💵 Чекаю ЗП<b>' + money(zpw) + '</b></div><div>✅ ЗП за місяць<b>' + money(zpm) + '</b></div></div>';
+    if (!r.items.length) { bx.innerHTML = h + '<div class="empty">Договорів 🟢 поки немає.</div>'; return; }
+    var G = { pay: [], zp: [], done: [] };
+    r.items.forEach(function (it) { G[dealGroup(it)].push(it); });
+    function card(it) {
+      var b = it.business, L = it.deal ? it.deal.lines : [], tot = 0;
+      L.forEach(function (l) { tot += l.sum; });
+      var c = '<div class="dcard" data-id="' + esc(b.id) + '"><div class="dhd"><span class="nm">' + esc(b.name) + '</span>' + (L.length ? '<b>' + money(tot) + '</b>' : '') + '</div>';
+      var sub = [];
+      if (it.deal && it.deal.at) sub.push('підписано ' + dm(d(it.deal.at)));
+      if (it.pay_next) sub.push('📞 оплата ' + wd(d(it.pay_next)) + ' ' + dm(d(it.pay_next)) + ' ' + t(it.pay_next));
+      if (sub.length) c += '<div class="dsub">' + sub.join(' · ') + '</div>';
+      L.forEach(function (l, i) {
+        c += '<div class="dln"><span class="lb">' + esc(l.k === 'other' ? '📄 ' + (l.name || 'Інше') : DSVC[l.k] || l.k) + '</span><span class="sm">' + money(l.sum) + '</span>' +
+          (ed ? '<button class="dck' + (l.paid ? ' on' : '') + '" data-i="' + i + '" data-w="paid">' + (l.paid ? '✓ ' : '') + '💰 Оплата</button><button class="dck' + (l.zp ? ' on' : '') + '" data-i="' + i + '" data-w="zp"' + (l.paid ? '' : ' disabled style="opacity:.45"') + '>' + (l.zp ? '✓ ' : '') + '💵 ЗП</button>'
+            : '<span class="dsub">' + (l.zp ? '✓ ЗП' : l.paid ? '✓ оплачено' : 'не оплачено') + '</span>') + '</div>';
+      });
+      if (ed && !L.length) c += '<div class="dsub" style="margin-top:6px">Додай послуги й суми — тоді буде видно, що висить:</div><div class="dadd"><input placeholder="QR 5000, профіль 3500" maxlength="200"><button data-save="1">Зберегти</button></div>';
+      if (ed && (L.some(function (l) { return !l.paid; }) || (!L.length && it.pay_next))) c += '<button class="dall" data-all="1">✅ Клієнт оплатив' + (L.length > 1 ? ' усе' : '') + '</button>';
+      return c + '</div>';
+    }
+    if (G.pay.length) h += '<div class="dgrp">⏳ Чекають оплату · ' + G.pay.length + '</div>' + G.pay.map(card).join('');
+    if (G.zp.length) h += '<div class="dgrp">💵 Оплачено — чекаю ЗП · ' + G.zp.length + '</div>' + G.zp.map(card).join('');
+    if (G.done.length) h += '<details style="margin-bottom:16px"><summary class="dgrp" style="list-style:none;cursor:pointer">✅ ЗП отримано · ' + G.done.length + ' ›</summary>' + G.done.map(card).join('') + '</details>';
+    h += '<div class="msg" id="dealMsg"></div><div style="height:16px"></div>';
+    bx.innerHTML = h;
+    if (!ed) return;
+    bx.querySelectorAll('.dcard').forEach(function (el) {
+      var id = el.dataset.id, it = r.items.filter(function (x) { return x.business.id === id; })[0];
+      function done(res, paidAll) {
+        it.deal = res.deal && res.deal.lines && res.deal.lines.length ? res.deal : it.deal;
+        if (res.business) { it.business = res.business; if (res.business.next_kind !== 'payment') it.pay_next = ''; }
+        if (paidAll) { S.data = null; hn('success'); }   // наработки «дзвінок щодо оплати» оновляться при переході
+        drawDeals();
+      }
+      function fail(e) { hn('error'); var m = $('#dealMsg'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } drawDeals(); }
+      el.querySelectorAll('.dck').forEach(function (bt) { bt.onclick = function () {
+        haptic(); var i = +bt.dataset.i, w = bt.dataset.w, on = !bt.classList.contains('on');
+        bt.disabled = true;
+        api('deal_mark', { id: id, idx: i, what: w, on: on }).then(function (res) {
+          var all = w === 'paid' && on && res.deal.lines.every(function (l) { return l.paid; });
+          done(res, all);
+        }).catch(fail);
+      }; });
+      var ab = el.querySelector('[data-all]');
+      if (ab) ab.onclick = function () { haptic(); ab.disabled = true; ab.textContent = 'Зберігаю…'; api('deal_mark', { id: id, idx: 'all', what: 'paid', on: true }).then(function (res) { done(res, true); }).catch(fail); };
+      var sb = el.querySelector('[data-save]');
+      if (sb) sb.onclick = function () {
+        var v = el.querySelector('.dadd input').value.trim(); if (!v) return;
+        haptic(); sb.disabled = true;
+        api('deal_save', { id: id, text: v }).then(function (res) { done(res, false); }).catch(fail);
+      };
+    });
+  }
+  function demoDeals() {
+    return { agent: 'matei', editable: true, today: '2026-11-03', items: [
+      { business: { id: 'd1', name: 'Окоіл', status: 'green' }, pay_next: '2026-11-06T12:00', deal: { at: '2026-11-03T14:50', lines: [{ k: 'qr', sum: 5000, paid: '', zp: '' }, { k: 'serv', sum: 3500, paid: '', zp: '' }] } },
+      { business: { id: 'd2', name: 'Пан Стакан', status: 'green' }, pay_next: '', deal: { at: '2026-10-28T12:00', lines: [{ k: 'tour', sum: 6000, paid: '2026-10-29', zp: '' }, { k: 'serv', sum: 3500, paid: '2026-10-29', zp: '2026-11-01' }] } },
+      { business: { id: 'd3', name: 'Барбершоп Борода', status: 'green' }, pay_next: '2026-11-04T10:00', deal: null }
+    ] };
   }
   function loadPrep() {
     if (DEMO && !S.data) return;
@@ -1609,6 +1707,13 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       { id: 'b5', name: 'Аптека Здоровʼя', status: 'red', red_kind: 'refusal', lpr_name: 'Олена', lpr_phone: '', last_comment: 'Мережа, рішення приймає головний офіс у Києві, локально нічого не вирішують', updated_at: '2026-11-03T11:30' },
       { id: 'b6', name: 'Окоіл', status: 'green', lpr_name: 'Євген', lpr_phone: '380503380490', last_comment: 'Відновлення профілю, 8300 грн, оплата 06.11', updated_at: '2026-11-03T14:50' }
     ];
+    if (action === 'deal_mark' || action === 'deal_save') {   // демо: міняємо прямо в S.deals
+      var dit = S.deals.items.filter(function (x) { return x.business.id === p.id; })[0];
+      if (action === 'deal_save') dit.deal = { at: now, lines: [{ k: 'other', name: p.text, sum: 1000, paid: '', zp: '' }] };
+      else (dit.deal ? dit.deal.lines : []).forEach(function (l, i) { if (p.idx === 'all' || p.idx === i) l[p.what] = p.on === false ? '' : now; });
+      if (action === 'deal_mark' && p.idx === 'all') dit.pay_next = '';
+      return { ok: true, deal: dit.deal || { lines: [] } };
+    }
     var ADM = /admin=1/.test(location.search);
     if (action === 'me') return ADM ? { me: { username: 'owner', name: 'Микола', role: 'owner', admin: true }, agents: [{ username: 'owner', name: 'Микола', level: 'edit' }, { username: 'matei', name: 'Матей', level: 'edit' }, { username: 'olga', name: 'Ольга', level: 'edit' }], now: now }
       : { me: { username: 'matei', name: 'Матей', role: 'agent' }, agents: [{ username: 'matei', name: 'Матей', level: 'edit' }], now: now };
