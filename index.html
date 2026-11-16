@@ -453,6 +453,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (m === 'forbidden') return 'Немає доступу.';
     if (m === 'busy') return 'Бот зараз зайнятий. Спробуй ще раз за хвилину.';
     if (m === 'bad_request') return 'Запит не дійшов цілим. Онови застосунок і спробуй ще раз.';
+    if (e && e.api && m.indexOf(' ') > 0 && /[А-Яа-яЇїІіЄєҐґ]/.test(m)) return m;   // сервер пояснив людською мовою (напр. «Напиши перше речення…») — показуємо як є
     if (e && e.net) return 'Нема звʼязку. Перевір інтернет і спробуй ще раз.';
     if (e && !e.api && /^(TypeError|ReferenceError|RangeError|SyntaxError)$/.test(e.name || '')) return 'Помилка в застосунку: ' + String(e.message || e).slice(0, 120) + '. Надішли скрін менеджеру.';   // збій у самому телефоні, не на сервері
     return 'Щось пішло не так на сервері. Спробуй ще раз за хвилину.' + (e && e.detail ? ' (' + e.detail + ')' : '');
@@ -1271,6 +1272,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     $('#pSave').onclick = function () {
       var btn = $('#pSave'), msg = $('#pMsg');
       var chk = qs.filter(function (x) { return x.q && x.pos; });
+      if ($('#pHook').value.trim().length < 15) { hn('error'); msg.className = 'msg err'; msg.textContent = 'Обери або напиши перше речення (розділ «Перше речення») — з нього почнеш розмову.'; $('#pHook').scrollIntoView({ block: 'center', behavior: 'smooth' }); $('#pHook').focus(); return; }
       if (chk.length < 3 && !btn.dataset.ok) { btn.dataset.ok = '1'; msg.className = 'msg err'; msg.textContent = 'Перевірено ' + chk.length + ' запит(и) з 3. Перевір ще або натисни «Готово» ще раз, щоб зберегти так.'; return; }
       var prep = { q: q(), who: who(), qs: qs.filter(function (x) { return x.q; }).map(function (x) { return { q: x.q, pos: x.pos }; }), hook: $('#pHook').value.trim(), arg: $('#pArg').value.trim(), note: $('#pNote').value.trim(), ex: ex.filter(function (x) { return x.name || x.qs.some(function (y) { return y.q; }); }).map(function (x) { return { k: x.k, name: x.name, qs: x.qs.filter(function (y) { return y.q; }), ver: x.ver, rev: x.rev, tour: x.tour }; }), prod: PP.map(function (x) { return x[0]; }).filter(function (k) { return prod[k]; }) };
       Object.keys(f).forEach(function (k) { prep[k] = f[k]; });
@@ -1288,7 +1290,10 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
           return openPrep();
         }
         prepBack();
-      }).catch(function (e) { btn.disabled = false; btn.textContent = '✅ Готово'; hn('error'); msg.className = 'msg err'; msg.textContent = errText(e); });
+      }).catch(function (e) {
+        btn.disabled = false; btn.textContent = '✅ Готово'; hn('error'); msg.className = 'msg err'; msg.textContent = errText(e);
+        if (/перше речення/i.test(String(e && e.message))) { var hk = $('#pHook'); if (hk) { hk.scrollIntoView({ block: 'center', behavior: 'smooth' }); hk.focus(); } }
+      });
     };
   }
   function prepBack() {
