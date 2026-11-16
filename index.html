@@ -42,6 +42,8 @@
   .stats::-webkit-scrollbar { display: none; }
   .stat { background: var(--bg2); border-radius: 10px; padding: 5px 9px; font-size: 14px; white-space: nowrap; }
   .stat b { font-weight: 700; }
+  .stat.pchip { background: rgba(43,125,233,.12); color: var(--link); cursor: pointer; }
+  .stat.pchip.ok { background: rgba(52,199,89,.14); color: #1f8a3d; }
   .stat.bad b { color: var(--red-t); }
   .tabs { display: flex; background: var(--bg2); border-radius: 10px; padding: 3px; }
   .tab { flex: 1; text-align: center; padding: 9px 4px; min-height: 40px; white-space: nowrap; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--text2); border: 0; background: none; font-family: inherit; }
@@ -658,6 +660,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     $('#stats').innerHTML = st('🚪 Двері', td.doors, n.doors, n.doorsAlarm) + st('🤝 ЛПР', td.lpr, n.lpr, n.lprAlarm) +
       '<span class="stat">⏱ ≥' + n.qualityMin + ' хв <b>' + td.quality + '</b></span>' +
       '<span class="stat">тижд. ЛПР <b>' + wk.lpr + '</b>/' + n.weekLpr + '</span>';
+    prepChip();
   }
 
   function row(b, timeCol) {
@@ -1010,13 +1013,27 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       if (S.wantPrep) { S.wantPrep = false; openPrep(); }
     }).catch(function () {});
   }
-  function prepBanner() {
-    var r = S.prep; if (!r || !r.editable) return '<span id="prepBn"></span>';
+  // Великий банер — лише коли підготовка «на часі»: з 16:00 (вечірня підготовка на завтра) або коли сьогоднішні зустрічі ще не підготовлені.
+  // Решту дня — маленька плашка «🎯 1/2» у рядку показників угорі, щоб не висіла над днем.
+  function prepState() {
+    var r = S.prep; if (!r || !r.editable) return null;
     var n = r.items.length, done = r.items.filter(function (x) { return x.done; }).length;
-    if (!n && (S.data && t(S.data.now) < '16:00')) return '<span id="prepBn"></span>';
+    var nowS = S.data ? String(S.data.now) : '', eve = t(nowS) >= '16:00', today = nowS.slice(0, 10) === r.date;
+    return { r: r, n: n, done: done, big: (n && done < n && (eve || today)) || (!n && eve) };
+  }
+  function prepChip() {
+    var old = $('#prepChip'); if (old) old.remove();
+    var p = prepState(), box = $('#stats');
+    if (!p || p.big || !p.n || !box || !box.innerHTML) return;
+    box.insertAdjacentHTML('afterbegin', '<span class="stat pchip' + (p.done === p.n ? ' ok' : '') + '" id="prepChip">🎯 ' + wd(p.r.date) + ' <b>' + p.done + '/' + p.n + '</b>' + (p.done === p.n ? ' ✓' : '') + '</span>');
+    $('#prepChip').onclick = function () { haptic(); openPrep(); };
+  }
+  function prepBanner() {
+    var p = prepState(); if (!p || !p.big) return '<span id="prepBn"></span>';
+    var r = p.r, n = p.n, done = p.done;
     return '<div class="banner pbn" id="prepBn">🎯 Підготовка · ' + wd(r.date) + ' ' + dm(r.date) + (n ? ': <b>' + done + ' з ' + n + '</b>' : ': зустрічей немає') + '<b class="l">' + (n && done < n ? 'Готуватись ›' : '＋ додати ›') + '</b></div>';
   }
-  function bindPrepBn() { var bn = $('#prepBn'); if (bn && bn.classList.contains('pbn')) bn.onclick = function () { openPrep(); }; }
+  function bindPrepBn() { var bn = $('#prepBn'); if (bn && bn.classList.contains('pbn')) bn.onclick = function () { openPrep(); }; prepChip(); }
   function showPanel(id) {
     var el = $('#detail'); el.dataset.id = id; el.classList.add('show'); el.scrollTop = 0;
     document.body.classList.add('lock'); if (tg && tg.BackButton) tg.BackButton.show();
@@ -1168,8 +1185,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       '<div class="crow2" style="margin-top:8px"><button id="pExP">＋ точка</button><button id="pExB">＋ бізнес власника</button></div>' +
       '<div class="pcnt" style="text-align:left">Кожна точка — окремий профіль і окремий договір. На кожній досить 1–2 запитів.</div></div>';
     h += '<div class="pcard"><div class="plbl">5 · Пропонуємо</div><div class="pchips" id="pProd"></div><div class="pcnt" id="pWhy" style="text-align:left"></div></div>';
-    h += '<div class="pcard"><div class="plbl">6 · Перше речення — з нього почнеш</div><div id="pHooks"></div>' +
-      '<textarea id="pHook" maxlength="220" rows="3" style="margin-top:8px" placeholder="Обери варіант вище і підправ — або напиши своє">' + esc(pr0.hook || '') + '</textarea><div class="pcnt" id="pCnt"></div>' +
+    h += '<div class="pcard"><div class="plbl">6 · Перше речення — з нього почнеш · можна кілька</div><div id="pHooks"></div>' +
+      '<textarea id="pHook" maxlength="400" rows="3" style="margin-top:8px" placeholder="Тапни один або кілька варіантів вище (повторний тап — прибрати) і підправ — або напиши своє">' + esc(pr0.hook || '') + '</textarea><div class="pcnt" id="pCnt"></div>' +
       '<details class="parg"' + (pr0.arg ? ' open' : '') + '><summary>Аргумент повністю (необовʼязково)</summary><textarea id="pArg" maxlength="600" rows="4" style="margin-top:6px" placeholder="Що ще скажеш, якщо зацікавиться">' + esc(pr0.arg || '') + '</textarea></details></div>';
     h += '<div class="pcard"><div class="plbl">7 · Для себе — що не забути</div><textarea id="pNote" maxlength="400" rows="3" placeholder="Напр.: є ще 2 точки — вул. Головна 12 і Садгора; обовʼязково узгодити, хто вирішує за всі">' + esc(pr0.note || '') + '</textarea>' +
       '<div class="pcnt" style="text-align:left">Бот нагадає це, коли зайдеш у двері.</div></div>';
@@ -1254,10 +1271,15 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     }
     function drawHooks() {
       var cur = $('#pHook').value.trim();
-      $('#pHooks').innerHTML = Object.keys(f).length ? sugHooks(f, q(), qs, ex).map(function (x) { return '<button class="popt' + (cur === x ? ' on' : '') + '">' + esc(x) + '</button>'; }).join('') : '<div class="pcnt" style="text-align:left">відміть факти — і тут зʼявляться готові варіанти</div>';
-      $('#pHooks').querySelectorAll('.popt').forEach(function (bt) { bt.onclick = function () { haptic(); $('#pHook').value = bt.textContent; cnt(); drawHooks(); }; });
+      $('#pHooks').innerHTML = Object.keys(f).length ? sugHooks(f, q(), qs, ex).map(function (x) { return '<button class="popt' + (cur.indexOf(x) >= 0 ? ' on' : '') + '">' + (cur.indexOf(x) >= 0 ? '✓ ' : '') + '<span>' + esc(x) + '</span></button>'; }).join('') : '<div class="pcnt" style="text-align:left">відміть факти — і тут зʼявляться готові варіанти</div>';
+      // кілька варіантів: тап додає речення в кінець, повторний тап — прибирає; власні правки в полі не губляться
+      $('#pHooks').querySelectorAll('.popt').forEach(function (bt) { bt.onclick = function () {
+        haptic(); var x = bt.querySelector('span').textContent, v = $('#pHook').value;
+        if (v.indexOf(x) >= 0) v = v.replace(x, ''); else v = v.trim() + (v.trim() ? ' ' : '') + x;
+        $('#pHook').value = v.replace(/\s{2,}/g, ' ').trim().slice(0, 400); cnt(); drawHooks();
+      }; });
     }
-    function cnt() { var n = $('#pHook').value.length; $('#pCnt').textContent = n + ' / 220'; }
+    function cnt() { var n = $('#pHook').value.length; $('#pCnt').textContent = n + ' / 400'; }
     el.querySelectorAll('[data-f]').forEach(function (bt) {
       bt.onclick = function () {
         haptic(); var k = bt.dataset.f;
@@ -1267,7 +1289,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       };
     });
     syncPos(); drawQs(); drawEx();
-    $('#pHook').oninput = function () { cnt(); };
+    $('#pHook').oninput = function () { cnt(); drawHooks(); };
     drawProd(); drawHooks(); cnt();
     $('#pSave').onclick = function () {
       var btn = $('#pSave'), msg = $('#pMsg');
