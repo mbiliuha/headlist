@@ -176,6 +176,8 @@
   .dcard { margin: 8px 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--bg); }
   .dhd { display: flex; align-items: baseline; gap: 8px; }
   .dhd .nm { font-weight: 600; flex: 1; min-width: 0; }
+  .ded { border: 0; background: var(--bg); border-radius: 8px; padding: 2px 8px; font-size: 14px; cursor: pointer; }
+  .dtot i { display: block; font-style: normal; font-size: 11px; color: var(--text2); margin-top: 2px; }
   .dsub { font-size: 13px; color: var(--text2); margin-top: 2px; }
   .dln { display: flex; align-items: center; gap: 6px; padding: 8px 0 0; }
   .dln .lb { flex: 1; min-width: 0; font-size: 15px; }
@@ -1041,14 +1043,16 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var bx = $('#dealBox'), r = S.deals; if (!bx || !r) return;
     var ed = r.editable, month = String(r.today || '').slice(0, 7), owe = 0, zpw = 0, zpm = 0;
     r.items.forEach(function (it) { (it.deal ? it.deal.lines : []).forEach(function (l) { if (!l.paid) owe += l.sum; else if (!l.zp) zpw += l.sum; else if (String(l.zp).slice(0, 7) === month) zpm += l.sum; }); });
-    var h = '<div class="dtot"><div>⏳ Чекаю оплату<b>' + money(owe) + '</b></div><div>💵 Чекаю ЗП<b>' + money(zpw) + '</b></div><div>✅ ЗП за місяць<b>' + money(zpm) + '</b></div></div>';
+    var nos = r.items.filter(function (it) { return !(it.deal && it.deal.lines && it.deal.lines.length); }).length;
+    var h = '<div class="dtot"><div>⏳ Чекаю оплату<b>' + money(owe) + '</b>' + (nos ? '<i>+ ' + nos + ' без сум</i>' : '') + '</div><div>💵 Чекаю ЗП<b>' + money(zpw) + '</b></div><div>✅ ЗП за місяць<b>' + money(zpm) + '</b></div></div>';
     if (!r.items.length) { bx.innerHTML = h + '<div class="empty">Договорів 🟢 поки немає.</div>'; return; }
     var G = { pay: [], zp: [], done: [] };
     r.items.forEach(function (it) { G[dealGroup(it)].push(it); });
     function card(it) {
       var b = it.business, L = it.deal ? it.deal.lines : [], tot = 0;
       L.forEach(function (l) { tot += l.sum; });
-      var c = '<div class="dcard" data-id="' + esc(b.id) + '"><div class="dhd"><span class="nm">' + esc(b.name) + '</span>' + (L.length ? '<b>' + money(tot) + '</b>' : '') + '</div>';
+      var c = '<div class="dcard" data-id="' + esc(b.id) + '"><div class="dhd"><span class="nm">' + esc(b.name) + '</span>' + (L.length ? '<b>' + money(tot) + '</b>' : '') +
+        (ed && L.length ? '<button class="ded" data-edit="1" title="Редагувати">✏️</button>' : '') + '</div>';
       var sub = [];
       if (it.deal && it.deal.at) sub.push('підписано ' + dm(d(it.deal.at)));
       if (it.pay_next) sub.push('📞 оплата ' + wd(d(it.pay_next)) + ' ' + dm(d(it.pay_next)) + ' ' + t(it.pay_next));
@@ -1058,7 +1062,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
           (ed ? '<button class="dck' + (l.paid ? ' on' : '') + '" data-i="' + i + '" data-w="paid">' + (l.paid ? '✓ ' : '') + '💰 Оплата</button><button class="dck' + (l.zp ? ' on' : '') + '" data-i="' + i + '" data-w="zp"' + (l.paid ? '' : ' disabled style="opacity:.45"') + '>' + (l.zp ? '✓ ' : '') + '💵 ЗП</button>'
             : '<span class="dsub">' + (l.zp ? '✓ ЗП' : l.paid ? '✓ оплачено' : 'не оплачено') + '</span>') + '</div>';
       });
-      if (ed && !L.length) c += '<div class="dsub" style="margin-top:6px">Додай послуги й суми — тоді буде видно, що висить:</div><div class="dadd"><input placeholder="QR 5000, профіль 3500" maxlength="200"><button data-save="1">Зберегти</button></div>';
+      if (ed && !L.length) c += '<div class="dsub" style="margin-top:6px">Додай послуги й суми — тоді буде видно, що висить:</div><div class="dadd"><input placeholder="QR 5000, обслуговування 2х3500" maxlength="300"><button data-save="1">Зберегти</button></div>';
       if (ed && (L.some(function (l) { return !l.paid; }) || (!L.length && it.pay_next))) c += '<button class="dall" data-all="1">✅ Клієнт оплатив' + (L.length > 1 ? ' усе' : '') + '</button>';
       return c + '</div>';
     }
@@ -1087,12 +1091,27 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       }; });
       var ab = el.querySelector('[data-all]');
       if (ab) ab.onclick = function () { haptic(); ab.disabled = true; ab.textContent = 'Зберігаю…'; api('deal_mark', { id: id, idx: 'all', what: 'paid', on: true }).then(function (res) { done(res, true); }).catch(fail); };
+      var eb = el.querySelector('[data-edit]');
+      if (eb) eb.onclick = function () {   // ✏️: позиції текстом у поле — виправити суму, додати/прибрати послугу
+        haptic();
+        var txt = (it.deal.lines || []).map(function (l) { return (l.k === 'other' ? (l.name || 'Інше') : (l.name || DSVC[l.k].replace(/^\S+\s/, ''))) + ' ' + l.sum; }).join(', ');
+        el.querySelectorAll('.dln, [data-all]').forEach(function (x) { x.style.display = 'none'; });
+        eb.style.display = 'none';
+        el.insertAdjacentHTML('beforeend', '<div class="dsub" style="margin-top:6px">Кожна послуга через кому. Дві однакові — «обслуговування 2х7400». Оплата й ЗП лишаться на тих самих позиціях.</div>' +
+          '<div class="dadd"><textarea rows="3" maxlength="300" style="flex:1;min-width:0;font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line, #ccc);resize:vertical"></textarea><button data-save="1">Зберегти</button></div><button class="dck" data-cancel="1" style="margin-top:6px">Скасувати</button>');
+        var inp = el.querySelector('.dadd textarea'); inp.value = txt; inp.focus();
+        el.querySelector('[data-cancel]').onclick = function () { drawDeals(); };
+        bindSave();
+      };
+      function bindSave() {
       var sb = el.querySelector('[data-save]');
       if (sb) sb.onclick = function () {
-        var v = el.querySelector('.dadd input').value.trim(); if (!v) return;
+        var v = el.querySelector('.dadd textarea, .dadd input').value.trim(); if (!v) return;
         haptic(); sb.disabled = true;
         api('deal_save', { id: id, text: v }).then(function (res) { done(res, false); }).catch(fail);
       };
+      }
+      bindSave();
     });
   }
   function demoDeals() {
