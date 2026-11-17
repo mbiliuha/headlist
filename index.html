@@ -679,7 +679,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     function st(label, v, norm, alarm) { return '<span class="stat' + (late && v <= alarm ? ' bad' : '') + '">' + label + ' <b>' + v + '</b>/' + norm + '</span>'; }
     $('#stats').innerHTML = st('🚪 Двері', td.doors, n.doors, n.doorsAlarm) + st('🤝 ЛПР', td.lpr, n.lpr, n.lprAlarm) +
       '<span class="stat">⏱ ≥' + n.qualityMin + ' хв <b>' + td.quality + '</b></span>' +
-      '<span class="stat">тижд. ЛПР <b>' + wk.lpr + '</b>/' + n.weekLpr + '</span>';
+      '<span class="stat">тижд. ЛПР <b>' + wk.lpr + '</b>/' + n.weekLpr + '</span>' +
+      (x.split ? x.split.map(function (c) { return '<span class="stat">👤 ' + esc(c.name) + ' 🚪<b>' + c.doors + '</b> 🤝<b>' + c.lpr + '</b></span>'; }).join('') : '');
     prepChip();
   }
 
@@ -699,7 +700,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (b.next_kind === 'payment' && timeCol) sub.push('💰 дзвінок щодо оплати');
     if (b.queued) sub.push('<i class="qd">⏳ чекає відправки</i>');
     return '<div class="item' + (S.tab === 'tasks' ? ' tint st-' + cls(b.status || 'none') : '') + '" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + cls(b.status) + '"></span><div class="body">' +
-      '<div class="name">' + esc(b.name) + '</div>' + (sub.length ? '<div class="sub">' + sub.map(function (x) { return '<span>' + x + '</span>'; }).join(' ') + '</div>' : '') +
+      '<div class="name">' + esc(b.name) + (b.who ? ' <span style="font-weight:400;color:var(--hint);font-size:13px">· ' + esc(b.who) + '</span>' : '') + '</div>' + (sub.length ? '<div class="sub">' + sub.map(function (x) { return '<span>' + x + '</span>'; }).join(' ') + '</div>' : '') +
       (b.last_comment ? '<div class="note">' + esc(b.last_comment) + '</div>' : '') + '</div>' +
       (b.lpr_phone ? '<a class="rcall" href="tel:+' + esc(digits(b.lpr_phone)) + '" data-call="' + esc(digits(b.lpr_phone)) + '" data-bid="' + esc(b.id) + '" aria-label="Подзвонити">📞</a>' : '') + '</div>';
   }
@@ -801,6 +802,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var times = visits.length ? 'перший візит ' + t(visits[0].start) + ' · останній запис ' + t(last.end || last.start) : '';
     var rp = c.repeats || c.returns ? 'повтори ' + (c.repeats + c.returns) : '';
     var line = isToday ? [times, rp] : ['🚪 дверей <b>' + c.doors + '</b>/' + n.doors + ' · 🤝 ЛПР <b>' + c.lpr + '</b>/' + n.lpr + ' · ⏱ ≥' + n.qualityMin + ' хв <b>' + c.quality + '</b>', rp, times];
+    if (r.split) line.push(r.split.map(function (c) { return '👤 ' + esc(c.name) + ': 🚪 <b>' + c.doors + '</b> · 🤝 <b>' + c.lpr + '</b>'; }).join(' · '));
     line = line.filter(Boolean);
     if (line.length) h += '<div class="dsum"><div class="st">' + line.join(' · ') + '</div></div>';
     if (r.rows.length > 1) h += '<div class="dctl"><div class="dflt"><button data-f="all"' + (onlyD ? '' : ' class="on"') + '>Усе</button><button data-f="doors"' + (onlyD ? ' class="on"' : '') + '>🚪 Лише двері</button></div>' +
@@ -858,7 +860,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var txt = String(e.comment || e.notes || '').replace(AUTO_RE, '↪');
     var ch = e.status_before && e.status_after && e.status_before !== e.status_after ? ' ' + (ST[e.status_before] || '') + ' → ' + (ST[e.status_after] || '') : '';
     var nx = e.next_dt && e.status_after !== 'red' && e.status_after !== 'green' ? ' · ↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '';
-    return '<div class="lrow" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + t(e.start) + '</div><div class="bd">' + ico + ' <b>' + esc(e.name || '—') + '</b>' + esc(ch + nx) + (txt ? ' — ' + esc(txt) : '') + '</div></div>';
+    return '<div class="lrow" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + t(e.start) + '</div><div class="bd">' + (e.mate ? '👤 ' + esc(e.mate) + ' · ' : '') + ico + ' <b>' + esc(e.name || '—') + '</b>' + esc(ch + nx) + (txt ? ' — ' + esc(txt) : '') + '</div></div>';
   }
   function dayRow(e, no) {
     var isV = e.kind === 'visit' && e.end && e.end !== e.start;
@@ -875,6 +877,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (e.status_after) meta.push(sb + (ST[e.status_after] || e.status_after));
     if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') meta.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt));
     if (e.by) meta.push('від @' + e.by);
+    if (e.mate) meta.unshift('👤 ' + e.mate);
     var txt = e.comment || e.notes;
     var vis = e.kind === 'visit', badge = vis ? (no ? '<span class="dno">🚪 ' + no + '</span>' : '<span class="dno rp">' + (e.status_before === 'yellow' ? 'повтор' : 'повернення') + '</span>') : '';
     return '<div class="drow' + (vis ? ' dv' + (no ? '' : ' rp') + ' st-' + cls(e.status_after || 'none') : '') + '" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + tm + '</div><div class="bd">' +
@@ -1615,7 +1618,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     }
     var pa = $('#pAdd'); if (pa) pa.onclick = function () { A.person = { role: 'agent', active: true, isNew: true, lead: '' }; drawAdmin(); };
     document.querySelectorAll('[data-revoke]').forEach(function (b) { b.onclick = function (ev) { ev.stopPropagation(); revoke(b.dataset.revoke); }; });
-    document.querySelectorAll('[data-person]').forEach(function (el) { el.onclick = function () { var p = ppl[el.dataset.person]; A.person = { username: p.username, name: p.name, role: p.role, office: p.office, active: p.active, lead: p.lead || '', linked: p.linked }; A.join = null; drawAdmin(); window.scrollTo(0, 0); }; });
+    document.querySelectorAll('[data-person]').forEach(function (el) { el.onclick = function () { var p = ppl[el.dataset.person]; A.person = { username: p.username, name: p.name, role: p.role, office: p.office, active: p.active, lead: p.lead || '', linked: p.linked, lead_name: p.lead_name || '', lead_field: !!p.lead_field, pair: !!p.pair }; A.join = null; drawAdmin(); window.scrollTo(0, 0); }; });
     bindForms();
   }
   function grantRow(g) {
@@ -1657,6 +1660,9 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         (r.managers || []).map(function (m) { return opt(m.username, m.name, p.lead || ''); }).join('') + '</select></div>' : '') +
       (p.isNew ? '' : '<div class="seg" id="pAct"><button data-v="1" class="' + (p.active ? 'on' : '') + '">✅ Активний</button><button data-v="0" class="' + (!p.active ? 'on' : '') + '">🔒 Вимкнути</button></div>') +
       (!p.isNew && p.active && !p.linked ? '<button class="addbtn" style="width:100%;margin:4px 0 0" id="pJoin">🔗 Посилання / QR для входу</button>' : '') +
+      (!p.isNew && p.active && p.role === 'agent' && p.lead_field ? (p.pair
+        ? '<div class="msg" style="margin:6px 0 0;text-align:left">🤝 Працює в парі з ' + esc(p.lead_name) + ': спільний хед-лист, нагадування обом, статистика — інструктора.</div><button class="addbtn" style="width:100%;margin:4px 0 0" id="pPair" data-v="end">🎓 Стажер самостійний — окремий хед-лист</button>'
+        : '<button class="addbtn" style="width:100%;margin:4px 0 0" id="pPair" data-v="start">🤝 Працює в парі з ' + esc(p.lead_name) + ' (спільний хед-лист)</button>') : '') +
       (p.isNew || !p.linked ? '' : '<button class="addbtn" style="width:100%;margin:4px 0 0" id="pReset">🔄 Скинути привʼязку Telegram (людина змінила акаунт)</button>') +
       '<button class="save" id="pSave">' + (p.isNew ? 'Додати' : 'Зберегти') + '</button><button class="addbtn" style="width:100%;margin:8px 0 0" id="pCancel">Скасувати</button>' +
       '<div class="msg" id="pMsg">' + (p.isNew ? (r.owner ? 'Після додавання людина відкриває @cube_headlist_bot і тисне «Почати». Без ніка — покажу QR для входу. Менеджер-керівник бачить своїх людей одразу; решті — через «Видати доступ».' : 'Людина закріпиться за тобою: її хед-лист бачиш лише ти і власник. Після додавання вона відкриває @cube_headlist_bot і тисне «Почати» (без ніка — покажу QR для входу).') : '') + '</div></div>';
@@ -1682,6 +1688,17 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         var p = A.person, b = this; b.disabled = true;
         api('join_link', { username: p.username }).then(function (r) { if (r && r.ok === false) throw new Error(r.error); haptic('medium'); A.join = { name: p.name || p.username, link: r.join.link, until: r.join.until }; A.person = null; drawAdmin(); window.scrollTo(0, 0); })
           .catch(function (e) { b.disabled = false; $('#pMsg').className = 'msg err'; $('#pMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
+      };
+      if ($('#pPair')) $('#pPair').onclick = function () {
+        var p = A.person, b = this, end = b.dataset.v === 'end';
+        var go = function (ok) {
+          if (!ok) return;
+          b.disabled = true;
+          api(end ? 'pair_end' : 'pair_start', { agent: p.username }).then(function (r) { if (r && r.ok === false) throw new Error(r.error); hn('success'); A.person = null; renderAdmin(); })
+            .catch(function (e) { b.disabled = false; $('#pMsg').className = 'msg err'; $('#pMsg').textContent = e.message && e.message.length > 12 ? e.message : errText(e); });
+        };
+        var q = end ? 'Стажер піде самостійно: далі веде власний хед-лист (наработки пари лишаються в інструктора). Продовжити?' : 'Увімкнути пару? Бізнеси стажера перейдуть у хед-лист інструктора, нагадування приходитимуть обом, статистика — одна, інструктора.';
+        if (tg && tg.showConfirm) tg.showConfirm(q, go); else go(confirm(q));
       };
       if ($('#pReset')) $('#pReset').onclick = function () {
         var p = A.person, go = function (ok) {
