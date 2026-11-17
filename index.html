@@ -726,7 +726,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (!S.data) return load();
     stats();
     var x = S.data, html = '';
-    if (x.open) html += '<div class="banner" id="openBn" data-start="' + esc(x.open.start) + '">📌 Зараз у візиті з ' + t(x.open.start) + (x.open.bizName ? ': <b>' + esc(x.open.bizName) + '</b>' : '') + ' · ⏱ <b id="openMin">' + dur(Math.max(0, mins(x.open.start, nowKyiv()))) + '</b></div>';
+    if (x.open) html += '<div class="banner" id="openBn" data-start="' + esc(x.open.start) + '">📌 ' + (x.open.who ? esc(x.open.who) + ' зараз у візиті' : 'Зараз у візиті') + ' з ' + t(x.open.start) + (x.open.bizName ? ': <b>' + esc(x.open.bizName) + '</b>' : '') + ' · ⏱ <b id="openMin">' + dur(Math.max(0, mins(x.open.start, nowKyiv()))) + '</b></div>';
     html += prepBanner();
     if (S.tab === 'day') { $('#main').innerHTML = html + '<div id="dayBox"><div class="spin">Завантаження…</div></div>'; bindPrepBn(); return loadDay(); }
     if (S.tab === 'deals') { $('#main').innerHTML = '<div id="dealBox"><div class="spin">Завантаження…</div></div>'; return loadDeals(); }
