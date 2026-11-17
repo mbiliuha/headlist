@@ -1035,7 +1035,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   }
   function dealGroup(it) {
     var L = it.deal ? it.deal.lines : [];
-    if (!L.length) return 'pay';
+    if (!L.length) return it.paid ? 'zp' : 'pay';   // оплачено на місці, але суми ще не внесені
     if (L.some(function (l) { return !l.paid; })) return 'pay';
     return L.some(function (l) { return !l.zp; }) ? 'zp' : 'done';
   }
