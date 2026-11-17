@@ -88,6 +88,9 @@
   .q { width: 14px; height: 14px; border-radius: 3px; display: block; }
   .q-green { background: var(--green); } .q-yellow { background: var(--yellow); } .q-blue { background: var(--blue); } .q-red { background: var(--red); } .q-white, .q- { background: var(--gray); }
   .q-e { border: 1.5px dashed var(--sep); }
+  .q { font-size: 9px; line-height: 14px; text-align: center; color: #fff; font-weight: 700; font-style: normal; }
+  .gpair { font-weight: 500; color: var(--text2); font-size: 13px; }
+  .gsp { font-size: 12px; color: var(--text2); margin-top: 5px; }
   .q-now { background: color-mix(in srgb, var(--green) 25%, transparent); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--green); margin: 0 3px; animation: qp 1.6s ease-in-out infinite; }
   @keyframes qp { 50% { opacity: .45; } }
   .gpz { display: flex; align-items: center; gap: 3px; color: var(--red-t); font-size: 11px; font-weight: 600; padding: 0 2px; white-space: nowrap; }
@@ -613,7 +616,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       seq.forEach(function (v) {
         var st = hm(v[0]), en = hm(v[1]);
         if (prevEnd !== null && st !== null && st - prevEnd >= 30) pend = Math.max(pend, st - prevEnd);
-        if (v[3]) { if (pend) q += gap(pend); pend = 0; q += '<i class="q q-' + esc(v[2] || 'white') + '"></i>'; cnt++; }
+        if (v[3]) { if (pend) q += gap(pend); pend = 0; q += '<i class="q q-' + esc(v[2] || 'white') + '">' + (v[4] ? esc(v[4]) : '') + '</i>'; cnt++; }
         if (en !== null && (prevEnd === null || en > prevEnd)) prevEnd = en;
       });
       var now = hm(nowT), inMin = 0;
@@ -626,12 +629,13 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       var line;
       if (a.first) {
         line = '<span' + (a.first > '11:00' ? ' class="r"' : '') + '>старт ' + esc(a.first) + '</span>';
-        if (a.open) line += ' · зараз: ' + esc(a.open.bizName || 'у дверях');
+        if (a.open) line += ' · зараз: ' + (a.open.who ? esc(a.open.who) + ' — ' : '') + esc(a.open.bizName || 'у дверях');
         else if (isToday && prevEnd !== null && now !== null && nowT < '19:00' && now - prevEnd >= 45) line += ' · <span class="r">остання 🚪 ' + dur(now - prevEnd).trim() + ' тому</span>';
-      } else line = a.open ? 'зараз: ' + esc(a.open.bizName || 'у дверях') : '<span' + (isToday && nowT > '11:00' ? ' class="r"' : '') + '>ще не вийшов</span>';
-      return '<div class="grow" data-u="' + esc(a.username) + '"><div class="gh"><b>' + esc(a.name) + (a.self ? ' (я)' : '') + '</b><span class="gt">' +
+      } else line = a.open ? 'зараз: ' + (a.open.who ? esc(a.open.who) + ' — ' : '') + esc(a.open.bizName || 'у дверях') : '<span' + (isToday && nowT > '11:00' ? ' class="r"' : '') + '>' + (a.pair ? 'ще не вийшли' : 'ще не вийшов') + '</span>';
+      return '<div class="grow" data-u="' + esc(a.username) + '"><div class="gh"><b>' + esc(a.name) + (a.self ? ' (я)' : '') + (a.pair ? ' <span class="gpair">🤝 ' + esc(a.pair) + '</span>' : '') + '</b><span class="gt">' +
         (a.open ? '<span class="g">● ' + inMin + ' хв</span> ' : '') + (a.overdue ? '<span class="r">⏰ ' + a.overdue + '</span> ' : '') + (a.prep ? '<span class="' + prepCls(a.prep) + '">🎯 ' + a.prep[0] + '/' + a.prep[1] + '</span> ' : '') + '🚪 ' + a.doors + '/' + n.doors + ' · 🤝 ' + a.lpr + '</span></div>' +
-        '<div class="gl">' + line + '</div><div class="gs">' + q + '</div></div>';
+        '<div class="gl">' + line + '</div><div class="gs">' + q + '</div>' +
+        (a.split ? '<div class="gsp">👥 ' + a.split.map(function (c) { return esc(c.name) + ' ' + c.doors; }).join(' · ') + '</div>' : '') + '</div>';
     }
   }
   function ring(v, max, sz) {
