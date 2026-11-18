@@ -774,7 +774,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       if (b.retry && dd <= today) rt.push(b);   // автоповтор після «нбт» — окремо, не як прострочене
       else if (dd < today) over.push(b); else if (dd === today) td.push(b); else if (dd === tomorrow) tm.push(b); else later.push(b);
     });
-    var h = group('⏰ Прострочено', over, 'over', true) + group('⚠️ Без дати', nodate, 'over', true) + group('🗓 Сплануй повернення (без часу)', pl, '', true) + group('Сьогодні', td, '', true) + group('🔁 Повтори після «нбт»', rt, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true);
+    var h = group('⏰ Прострочено', over, 'over', true) + group('⚠️ Без дати', nodate, 'over', true) + group('🗓 Сплануй повернення (без часу)', pl, '', true) + group('Сьогодні', td, '', true) + group('📵 Передзвонити (не взяли трубку)', rt, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true);
     return h || '<div class="empty">Наработок немає. Час на нові двері 🚪</div>';
   }
   function allView() {
