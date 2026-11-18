@@ -56,6 +56,8 @@
   .who.bk { color: var(--link); cursor: pointer; }
   .hdbtn { flex: none; border: 1px solid var(--sep); background: var(--bg); color: var(--link); border-radius: 10px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: 14px; }
   .tsum { padding: 10px 16px 0; font-size: 14px; color: var(--text2); }
+  .tnav { white-space: nowrap; } .tnav button { border: 0; background: var(--sec, rgba(127,127,127,.15)); color: var(--link); font-size: 18px; font-weight: 700; min-width: 34px; height: 30px; border-radius: 8px; margin: 0 6px; cursor: pointer; vertical-align: middle; }
+  .tnav button:first-child { margin-left: 0; }
   .psum { margin: 8px 12px 0; padding: 10px 12px; border-radius: 14px; background: var(--bg); font-size: 13.5px; color: var(--text2); line-height: 1.45; }
   .psum small { display: block; font-size: 12px; margin-top: 1px; } .psum .pst { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--sep); font-size: 12.5px; }
   .psum b { color: var(--text); } .psum b.g { color: var(--green-t); } .psum b.r { color: var(--red-t); }
@@ -537,10 +539,17 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (S.data) { render(); load(true); } else load();
   }
   // ── панель «Команда»: як справи в кожного агента зараз ──
+  var TEAMC = {};   // минулі дні «Команди» — лише в памʼяті
+  function teamDay(delta) {
+    var today = nowKyiv().slice(0, 10), cur = S.teamDay || today, x = cur;
+    do { x = addDays(x, delta); } while ([0, 6].indexOf(new Date(x + 'T12:00:00Z').getUTCDay()) >= 0 && x > addDays(today, -62));   // вихідні пропускаємо
+    if (x >= today) x = ''; if (x && x < addDays(today, -60)) return;
+    S.teamDay = x; haptic(); renderTeam();
+  }
   function renderTeam() {
-    var c = lsGet('hl_team_' + (S.me ? S.me.me.username : ''));
+    var td = S.teamDay || '', c = td ? TEAMC[td] : lsGet('hl_team_' + (S.me ? S.me.me.username : ''));
     if (c && c.agents) drawTeam(c); else $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
-    api('team').then(function (r) { lsSet('hl_team_' + S.me.me.username, r); S.offline = false; drawBar(); if (S.view === 'team') drawTeam(r); })
+    api('team', td ? { date: td } : {}).then(function (r) { if (td) TEAMC[td] = r; else lsSet('hl_team_' + S.me.me.username, r); S.offline = false; drawBar(); if (S.view === 'team' && (S.teamDay || '') === td) drawTeam(r); })
       .catch(function (e) { if (S.view !== 'team') return; if (c && e && e.net) { S.offline = true; drawBar(); return; } if (!c) $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
   }
   function drawTeam(r) {
@@ -561,7 +570,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     function sumLine(list) {
       var d = 0, l = 0, inn = 0, ov = 0;
       list.forEach(function (a) { d += a.doors; l += a.lpr; if (a.open) inn++; ov += a.overdue || 0; });
-      return '<div class="tsum">Сьогодні, ' + wd(r.today) + ' ' + dm(r.today) + ' · 🚪 <b>' + d + '</b>/' + list.length * n.doors + ' · 🤝 <b>' + l + '</b>/' + list.length * n.lpr +
+      return '<div class="tsum"><span class="tnav"><button class="tdp">‹</button>' + (isToday ? 'Сьогодні, ' : '') + wd(r.today) + ' ' + dm(r.today) + (isToday ? '' : '<button class="tdn">›</button>') + '</span> · 🚪 <b>' + d + '</b>/' + list.length * n.doors + ' · 🤝 <b>' + l + '</b>/' + list.length * n.lpr +
         (inn ? ' · <b class="g">● ' + inn + ' у дверях</b>' : '') + (ov ? ' · <b class="r">⏰ ' + ov + '</b>' : '') + '</div>' + prepSum(list);
     }
     // підготовка до переговорів: хто готовий на найближчий день + 30-денна статистика «з підготовкою / без»
@@ -609,6 +618,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (!ag.length) h += '<div class="empty">Поки немає агентів.</div>';
     $('#main').innerHTML = h;
     document.querySelectorAll('.ochips button, .ocard').forEach(function (el) { el.onclick = function () { setOffice(el.dataset.o); }; });
+    document.querySelectorAll('.tdp').forEach(function (el) { el.onclick = function () { teamDay(-1); }; });
+    document.querySelectorAll('.tdn').forEach(function (el) { el.onclick = function () { teamDay(1); }; });
     document.querySelectorAll('.av, .grow').forEach(function (el) { el.onclick = function (ev) { ev.stopPropagation(); openAgent(el.dataset.u); }; });
     function setOffice(id) { lsSet('hl_off', id); haptic(); window.scrollTo(0, 0); drawTeam(r); }
     S.setOffice = setOffice;
