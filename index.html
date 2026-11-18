@@ -47,6 +47,9 @@
   .stat.bad b { color: var(--red-t); }
   .tabs { display: flex; background: var(--bg2); border-radius: 10px; padding: 3px; overflow-x: auto; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
+  #main.swl { animation: swl .22s ease-out; } #main.swr { animation: swr .22s ease-out; }
+  @keyframes swl { from { transform: translateX(40px); opacity: .4; } to { transform: none; opacity: 1; } }
+  @keyframes swr { from { transform: translateX(-40px); opacity: .4; } to { transform: none; opacity: 1; } }
   .tab { flex: 1 0 auto; text-align: center; padding: 9px 4px; min-height: 40px; white-space: nowrap; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--text2); border: 0; background: none; font-family: inherit; }
   .tab.on { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
   /* панель «Команда» */
@@ -1773,8 +1776,39 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     tb.onclick = function () {
       document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === tb); });
       S.tab = tb.dataset.tab; haptic(); window.scrollTo(0, 0); if (S.data || S.tab === 'admin') render();
+      try { var bar = $('#tabs'); bar.scrollTo({ left: tb.offsetLeft - (bar.clientWidth - tb.offsetWidth) / 2, behavior: 'smooth' }); } catch (e) {}
     };
   });
+
+  // свайп вліво/вправо — сусідня вкладка (не з країв екрана, не по рядках, що самі гортаються вбік, не в полях)
+  (function () {
+    var x0 = 0, y0 = 0, t0 = 0, on = false;
+    function hScroll(el) {
+      for (; el && el !== document.body; el = el.parentElement) {
+        if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT') return true;
+        if (el.scrollWidth > el.clientWidth + 2) { var ox = getComputedStyle(el).overflowX; if (ox === 'auto' || ox === 'scroll') return true; }
+      }
+      return false;
+    }
+    document.addEventListener('touchstart', function (e) {
+      on = false;
+      if (e.touches.length !== 1 || $('#detail').classList.contains('show') || !$('#tabs').offsetParent) return;
+      var t = e.touches[0], w = window.innerWidth;
+      if (t.clientX < 24 || t.clientX > w - 24 || hScroll(e.target)) return;
+      x0 = t.clientX; y0 = t.clientY; t0 = Date.now(); on = true;
+    }, { passive: true });
+    document.addEventListener('touchend', function (e) {
+      if (!on) return; on = false;
+      var t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0, ms = Date.now() - t0, w = window.innerWidth;
+      if (Math.abs(dx) < 2 * Math.abs(dy)) return;                                   // рух переважно вгору-вниз — це гортання списку
+      if (!(Math.abs(dx) > w * 0.35 || (Math.abs(dx) > 70 && ms < 300))) return;     // довгий свайп або швидкий змах
+      var tabs = Array.prototype.filter.call(document.querySelectorAll('.tab'), function (x) { return x.style.display !== 'none'; });
+      var i = tabs.findIndex(function (x) { return x.dataset.tab === S.tab; }), j = i + (dx < 0 ? 1 : -1);
+      if (i < 0 || j < 0 || j >= tabs.length) return;
+      tabs[j].onclick();
+      var m = $('#main'); m.classList.remove('swl', 'swr'); void m.offsetWidth; m.classList.add(dx < 0 ? 'swl' : 'swr');
+    }, { passive: true });
+  })();
 
   // ── демо-дані (?demo=1) для перегляду без Telegram ──
   function demo(action, p) {
