@@ -1474,8 +1474,10 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         '<div class="field" id="stWhenF"><label>Коли</label><input id="stWhen" enterkeyhint="done" autocomplete="off" placeholder="напр. завтра 11:00 або пт 15:30"></div>' +
         '<div class="field" id="stFarF" style="display:none"><label>Причина</label><input id="stFar" placeholder="чому не раніше ніж за 2 робочі дні"></div>' +
         '</div></div><button class="save" id="stBtn" style="display:none">Змінити статус</button><div class="msg" id="stMsg"></div></div>');
+    if (ed) h += '<div class="sec"><h2>Дублі</h2><div class="card"><button class="pbtn" id="dupBtn" style="margin:0">🔗 Злити з іншою карткою…</button><div id="dupBox"></div></div></div>';
     h += '<div class="sec"><h2>Історія</h2><div class="card" id="hist">' + histHtml(r.events) + '</div></div><div style="height:24px"></div>';
     el.innerHTML = h;
+    if (ed) $('#dupBtn').onclick = function () { haptic(); dupPicker(b); };
     focusHist();
     $('#bk').onclick = function () { closeBiz(); };
     var pe = $('#pEdit'); if (pe) pe.onclick = function () { openPrepForm(b.id, 'biz'); };
@@ -1534,6 +1536,44 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       msg.textContent = m.length > 15 ? m : errText(e);
       if (/робоч/.test(m)) { $('#stFarF').style.display = ''; }
     });
+  }
+  // «Антидубль»: схожі картки (той самий номер, назва, одруківка, частина назви) + пошук; обрана картка зливається В ЦЮ
+  function dupPicker(b) {
+    var box = $('#dupBox');
+    box.innerHTML = '<input class="pin" id="dupQ" style="margin-top:10px" placeholder="або знайди за назвою…" autocomplete="off" enterkeyhint="search"><div id="dupList" class="sb" style="margin-top:8px">Шукаю схожі…</div>';
+    function draw(items) {
+      var L = $('#dupList');
+      if (!items.length) { L.innerHTML = 'Схожих карток не знайшов. Спробуй пошук за назвою.'; return; }
+      L.innerHTML = items.map(function (x) {
+        return '<div style="display:flex;align-items:center;gap:8px;border-top:1px solid var(--sep);padding:8px 0"><span class="dot s-' + cls(x.status) + '" style="margin:0"></span>' +
+          '<div style="flex:1;min-width:0"><b>' + esc(x.name) + '</b><div class="sb">' + esc([x.lpr, x.phone ? '+' + x.phone : '', x.why].filter(Boolean).join(' · ')) + '</div></div>' +
+          '<button class="pbtn" data-dup="' + esc(x.id) + '" style="margin:0;width:auto;padding:8px 10px">Злити сюди</button></div>';
+      }).join('');
+      L.querySelectorAll('[data-dup]').forEach(function (bt) {
+        bt.onclick = function () {
+          var x = items.filter(function (y) { return y.id === bt.dataset.dup; })[0];
+          var q = 'Злити «' + x.name + '» у «' + b.name + '»? Візити, дзвінки й договір перейдуть сюди, а «' + x.name + '» зникне зі списку.';
+          function go(ok) {
+            if (!ok) return;
+            bt.disabled = true; bt.textContent = '…';
+            api('biz_merge', { keep: b.id, dup: x.id }).then(function (r) {
+              if (r && r.ok === false) { bt.disabled = false; bt.textContent = 'Злити сюди'; $('#dupList').insertAdjacentHTML('afterbegin', '<div class="msg err">' + esc(r.error || 'Не вдалося') + '</div>'); return; }
+              hn('success');
+              if (S.data && S.data.businesses) {
+                S.data.businesses = S.data.businesses.filter(function (y) { return y.id !== x.id; });
+                var i = S.data.businesses.findIndex(function (y) { return y.id === b.id; });
+                if (i >= 0 && r.business) S.data.businesses[i] = r.business;
+              }
+              delete BIZ[b.id]; delete BIZ[x.id]; S.stale = true; cacheList(); openBiz(b.id);
+            }).catch(function (e) { bt.disabled = false; bt.textContent = 'Злити сюди'; $('#dupList').insertAdjacentHTML('afterbegin', '<div class="msg err">' + esc(errText(e)) + '</div>'); });
+          }
+          if (tg && tg.showConfirm) { try { tg.showConfirm(q, go); return; } catch (e) {} } go(confirm(q));
+        };
+      });
+    }
+    function find(q) { api('biz_dups', { id: b.id, q: q || '' }).then(function (r) { draw(r.items || []); }).catch(function (e) { $('#dupList').textContent = errText(e); }); }
+    var tmr; $('#dupQ').oninput = function () { clearTimeout(tmr); var v = this.value; tmr = setTimeout(function () { find(v); }, 350); };
+    find('');
   }
   function save(b) {
     var p = { id: b.id, name: $('#fName').value, lpr_name: $('#fLpr').value, lpr_phone: $('#fPhone').value.replace(/\s/g, ''), note: $('#fNote').value };
