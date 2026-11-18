@@ -695,7 +695,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var tm = '';
     if (timeCol) {
       var dd = d(b.next_dt), today = d(S.data.now);
-      tm = '<div class="time' + (b.overdue ? ' over' : '') + '">' + (b.next_dt ? t(b.next_dt) : '—') +
+      tm = '<div class="time' + (b.overdue ? ' over' : '') + '">' + (b.plan && dd <= today ? '🗓' : b.next_dt ? t(b.next_dt) : '—') +
         (dd && dd !== today ? '<small>' + wd(dd) + ' ' + dm(dd) + '</small>' : '') + '</div>';
     }
     var sub = [];
@@ -755,14 +755,15 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var x = S.data, today = d(x.now), tomorrow = addDays(today, 1);
     var open = x.businesses.filter(function (b) { return isOpenSt(b.status) || (b.status === 'green' && b.next_kind === 'payment' && b.next_dt); });
     open.sort(function (a, b) { return String(a.next_dt || '9').localeCompare(String(b.next_dt || '9')); });
-    var over = [], td = [], tm = [], later = [], nodate = [], rt = [];
+    var over = [], td = [], tm = [], later = [], nodate = [], rt = [], pl = [];
     open.forEach(function (b) {
       if (!b.next_dt) return nodate.push(b);
       var dd = d(b.next_dt);
+      if (b.plan && dd <= today) return pl.push(b);   // повернення без часу — агент ставить годину зранку
       if (b.retry && dd <= today) rt.push(b);   // автоповтор після «нбт» — окремо, не як прострочене
       else if (dd < today) over.push(b); else if (dd === today) td.push(b); else if (dd === tomorrow) tm.push(b); else later.push(b);
     });
-    var h = group('⏰ Прострочено', over, 'over', true) + group('⚠️ Без дати', nodate, 'over', true) + group('Сьогодні', td, '', true) + group('🔁 Повтори після «нбт»', rt, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true);
+    var h = group('⏰ Прострочено', over, 'over', true) + group('⚠️ Без дати', nodate, 'over', true) + group('🗓 Сплануй повернення (без часу)', pl, '', true) + group('Сьогодні', td, '', true) + group('🔁 Повтори після «нбт»', rt, '', true) + group('Завтра', tm, '', true) + group('Далі', later, '', true);
     return h || '<div class="empty">Наработок немає. Час на нові двері 🚪</div>';
   }
   function allView() {
