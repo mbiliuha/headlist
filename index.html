@@ -1835,6 +1835,17 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (action === 'prep_add' || action === 'prep_del') return { ok: true, business: B[0] };
   }
 
+  // клавіатура на iPhone: синя ✓ (Enter) у полі й тап поза полем ховають її
+  function isField(el) { return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable); }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target && e.target.tagName === 'INPUT' && !e.isComposing) { e.preventDefault(); e.target.blur(); }
+  }, true);
+  document.addEventListener('touchstart', function (e) {
+    var a = document.activeElement, t = e.target;
+    if (!isField(a) || isField(t) || (t.closest && t.closest('label, button, a, summary, [data-keepkb]'))) return;
+    a.blur();
+  }, { capture: true, passive: true });
+
   if (GAS && !INIT && !KEY && google.script.url) {
     google.script.url.getLocation(function (loc) {
       INIT = initFromHash(loc && loc.hash);
