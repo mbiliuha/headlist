@@ -1489,6 +1489,11 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         '<div class="field" id="stWhenF"><label>Коли</label><input id="stWhen" enterkeyhint="done" autocomplete="off" placeholder="напр. завтра 11:00 або пт 15:30"></div>' +
         '<div class="field" id="stFarF" style="display:none"><label>Причина</label><input id="stFar" placeholder="чому не раніше ніж за 2 робочі дні"></div>' +
         '</div></div><button class="save" id="stBtn" style="display:none">Змінити статус</button><div class="msg" id="stMsg"></div></div>');
+    if (ed && b.next_kind === 'payment' && b.next_dt) h += '<div class="sec"><h2>💰 Дзвінок щодо оплати</h2><div class="card"><div class="seg" id="paySeg">' +
+      '<button data-pw="ok">✅ Оплатили</button><button data-pw="nb">📵 Не взяв</button><button data-pw="mv">💬 Поговорили — оплатить пізніше</button></div>' +
+      '<div id="payForm" style="display:none"><div class="field"><label>Коли</label><input id="payWhen" enterkeyhint="done" autocomplete="off" placeholder="напр. пт 12:00"></div>' +
+      '<textarea id="payWhy" maxlength="400" placeholder="Що сказав клієнт: напр. чекає зарплату в пʼятницю"></textarea><button class="save" id="payBtn">Зберегти</button></div>' +
+      '<div class="msg" id="payMsg"></div></div></div>';
     if (ed) h += '<div class="sec"><h2>Дублі</h2><div class="card"><button class="pbtn" id="dupBtn" style="margin:0">🔗 Злити з іншою карткою…</button><div id="dupBox"></div></div></div>';
     h += '<div class="sec"><h2>Історія</h2><div class="card" id="hist">' + histHtml(r.events) + '</div></div><div style="height:24px"></div>';
     el.innerHTML = h;
@@ -1498,6 +1503,29 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var pe = $('#pEdit'); if (pe) pe.onclick = function () { openPrepForm(b.id, 'biz'); };
     var cb = $('#callBtn'); if (cb) cb.onclick = function (ev) { return window.callNum(ev, b.id, b.lpr_phone); };
     if (ed) $('#saveBtn').onclick = function () { save(b); };
+    var pseg = $('#paySeg');
+    if (pseg) {
+      var payDo = function (what, extra) {
+        var m = $('#payMsg'); m.textContent = 'Зберігаю…';
+        api('pay', Object.assign({ id: b.id, what: what }, extra || {})).then(function (res) {
+          if (!res.ok) { m.textContent = '❌ ' + (res.error || 'Не вдалося'); return; }
+          var j = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
+          if (j >= 0 && res.business) S.data.businesses[j] = res.business;
+          delete BIZ[b.id]; S.stale = true; cacheList(); haptic();
+          openBiz(b.id); setTimeout(function () { var m2 = $('#payMsg') || $('#msg'); if (m2) m2.textContent = res.msg || '✅ Збережено'; }, 400);
+        }).catch(function (e) { m.textContent = '❌ ' + errText(e); });
+      };
+      pseg.querySelectorAll('button').forEach(function (bt) { bt.onclick = function () {
+        var w = bt.dataset.pw;
+        if (w === 'mv') { $('#payForm').style.display = ''; $('#payWhen').focus(); return; }
+        if (w === 'ok') {
+          var q = 'Клієнт оплатив «' + b.name + '»?', go = function (yes) { if (yes) payDo('ok'); };
+          if (tg && tg.showConfirm) { try { tg.showConfirm(q, go); return; } catch (e) {} } go(confirm(q)); return;
+        }
+        payDo(w);
+      }; });
+      $('#payBtn').onclick = function () { payDo('mv', { when: $('#payWhen').value, text: $('#payWhy').value }); };
+    }
     syncDirty();
     if (ed && $('#stSeg')) {
       var pick = '';
