@@ -1207,10 +1207,14 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         '<div class="chint">Дай кандидату відсканувати QR камерою його телефона — відкриється бот, він натисне «Почати» і одразу отримає свій хед-лист.</div>' +
         '<div class="crow2"><button id="cShare">📤 Надіслати посилання</button><button id="cCopy">📋 Копіювати</button></div></div>';
     }
-    h += '<button class="pbtn" id="cNew">＋ ' + (r.items.length ? 'Ще один кандидат' : 'Новий кандидат') + '</button>';
+    h += '<div class="pcard"><input class="pin" id="cName" maxlength="40" placeholder="Імʼя кандидата (необовʼязково), напр. Христина"></div>' +
+      '<button class="pbtn" id="cNew">＋ ' + (r.items.length ? 'Ще один кандидат' : 'Новий кандидат') + '</button>';
     if (r.items.length) h += '<div class="pcard">' + r.items.map(function (x) {
       var dec = x.st === 'in' || x.st === 'off';
-      return '<div class="citem"><div class="nm">' + esc(x.name) + (x.real && x.real !== x.name ? ' · ' + esc(x.real) : '') + '</div><div class="sb">' + esc(CST[x.st] || x.st) +
+      var canNm = x.st !== 'no' && x.st !== 'gone';
+      return '<div class="citem"><div class="nm">' + esc(x.name) + (x.real && x.name.indexOf(x.real) < 0 ? ' · ' + esc(x.real) : '') +
+        (canNm ? ' <button class="cnm" data-nm="' + esc(x.username) + '" style="border:0;background:none;color:var(--link);font-size:14px;padding:0 4px">✏️ Імʼя</button>' : '') + '</div>' +
+        '<div class="cnf" data-nf="' + esc(x.username) + '" style="display:none;margin:6px 0"><div class="dadd"><input maxlength="40" placeholder="Імʼя, напр. Христина" value="' + esc(x.given ? x.real : '') + '"><button data-nsave="' + esc(x.username) + '">Зберегти</button></div></div><div class="sb">' + esc(CST[x.st] || x.st) +
         (x.st !== 'wait' && x.st !== 'gone' ? ' · 🚪 ' + x.doors + ' · 🤝 ' + x.lpr : '') + (x.date !== r.today ? ' · ' + wd(x.date) + ' ' + dm(x.date) : '') + '</div>' +
         (dec ? '<div class="crow2"><button class="y" data-y="' + esc(x.username) + '">✅ Беремо стажером</button><button class="n" data-n="' + esc(x.username) + '">❌ Не беремо</button></div>' : '') + '</div>';
     }).join('') + '</div>';
@@ -1219,13 +1223,26 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     $('#bk').onclick = function () { closeCand(); };
     $('#cNew').onclick = function () {
       var b = this; b.disabled = true; haptic('medium');
-      api('cand_new', {}).then(function (rr) { if (rr && rr.ok === false) throw new Error(rr.error); S.candDirty = true; return loadCand(); }).catch(function (e) { b.disabled = false; try { tg.showAlert(e.message && e.message.length > 12 ? e.message : errText(e)); } catch (q) {} });
+      var nm = ($('#cName') && $('#cName').value || '').trim();
+      api('cand_new', { name: nm }).then(function (rr) { if (rr && rr.ok === false) throw new Error(rr.error); S.candDirty = true; return loadCand(); }).catch(function (e) { b.disabled = false; try { tg.showAlert(e.message && e.message.length > 12 ? e.message : errText(e)); } catch (q) {} });
     };
     if (wait) {
       var txt = 'Твій хед-лист на оглядовий день — відкрий і натисни «Почати»: ';
       $('#cShare').onclick = function () { haptic(); var u = 'https://t.me/share/url?url=' + encodeURIComponent(wait.link) + '&text=' + encodeURIComponent(txt); try { if (tg && tg.openTelegramLink) return tg.openTelegramLink(u); } catch (e) {} openLnk(u); };
       $('#cCopy').onclick = function () { haptic(); var ok = copyTxt(wait.link); try { tg.showAlert(ok ? 'Посилання скопійовано.' : wait.link); } catch (e) {} };
     }
+    el.querySelectorAll('[data-nm]').forEach(function (bt) {
+      bt.onclick = function () { haptic(); var f = el.querySelector('[data-nf="' + bt.dataset.nm + '"]'); f.style.display = f.style.display === 'none' ? '' : 'none'; var i = f.querySelector('input'); if (f.style.display === '') i.focus(); };
+    });
+    el.querySelectorAll('[data-nsave]').forEach(function (bt) {
+      bt.onclick = function () {
+        var u = bt.dataset.nsave, i = el.querySelector('[data-nf="' + u + '"] input'), v = (i.value || '').trim();
+        if (v.length < 2) { try { tg.showAlert('Напиши імʼя кандидата, напр. «Христина».'); } catch (q) {} return; }
+        bt.disabled = true; haptic('medium');
+        api('cand_name', { username: u, name: v }).then(function (rr) { if (rr && rr.ok === false) throw new Error(rr.error); S.candDirty = true; return loadCand(); })
+          .catch(function (e) { bt.disabled = false; try { tg.showAlert(e.message && e.message.length > 12 ? e.message : errText(e)); } catch (q) {} });
+      };
+    });
     el.querySelectorAll('[data-y],[data-n]').forEach(function (bt) {
       bt.onclick = function () {
         var yes = !!bt.dataset.y, u = bt.dataset.y || bt.dataset.n, it = r.items.filter(function (x) { return x.username === u; })[0];
