@@ -1193,8 +1193,17 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     try { var q = window.qrcode(0, 'M'); q.addData(link); q.make(); return '<div class="cqr">' + q.createSvgTag({ cellSize: 6, margin: 2, scalable: true }) + '</div>'; } catch (e) {}
     return '<div class="chint" style="word-break:break-all">' + esc(link) + '</div>';
   }
-  function loadCand() {
-    return api('cand').then(function (r) { S.cand = r; if ($('#detail').dataset.id === 'cand' && $('#detail').classList.contains('show')) drawCand(true); })
+  // агент саме пише в полі (імʼя кандидата) — не перемальовуємо панель, інакше поле й клавіатура зникають
+  function candTyping() { var a = document.activeElement; return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && $('#detail').contains(a); }
+  function candPoll() { clearTimeout(S.candT); S.candT = setTimeout(function () { if ($('#detail').dataset.id === 'cand' && $('#detail').classList.contains('show')) loadCand(true); }, 5000); }
+  function loadCand(poll) {
+    return api('cand').then(function (r) {
+      var same = poll && S.cand && JSON.stringify(r) === JSON.stringify(S.cand);
+      S.cand = r;
+      if (!($('#detail').dataset.id === 'cand' && $('#detail').classList.contains('show'))) return;
+      if (poll && (same || candTyping())) { candPoll(); return; }   // нічого не змінилось або агент пише — лишаємо як є
+      drawCand(true);
+    })
       .catch(function (e) { if ($('#detail').dataset.id === 'cand') $('#detail').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
   }
   function drawCand(fresh) {
@@ -1207,7 +1216,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         '<div class="chint">Дай кандидату відсканувати QR камерою його телефона — відкриється бот, він натисне «Почати» і одразу отримає свій хед-лист.</div>' +
         '<div class="crow2"><button id="cShare">📤 Надіслати посилання</button><button id="cCopy">📋 Копіювати</button></div></div>';
     }
-    h += '<div class="pcard"><input class="pin" id="cName" maxlength="40" placeholder="Імʼя кандидата (необовʼязково), напр. Христина"></div>' +
+    h += '<div class="pcard"><input class="pin" id="cName" maxlength="40" placeholder="Імʼя НОВОГО кандидата (необовʼязково)"></div>' +
       '<button class="pbtn" id="cNew">＋ ' + (r.items.length ? 'Ще один кандидат' : 'Новий кандидат') + '</button>';
     if (r.items.length) h += '<div class="pcard">' + r.items.map(function (x) {
       var dec = x.st === 'in' || x.st === 'off';
@@ -1219,7 +1228,9 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         (dec ? '<div class="crow2"><button class="y" data-y="' + esc(x.username) + '">✅ Беремо стажером</button><button class="n" data-n="' + esc(x.username) + '">❌ Не беремо</button></div>' : '') + '</div>';
     }).join('') + '</div>';
     h += '<div class="msg" style="margin:12px 16px;line-height:1.45">Записи кандидата видно в тебе в «Команда». О 18:00 бот спитає, чи береш його стажером, о 20:00 доступ кандидата закривається сам. «Не беремо» — його бізнеси переходять у твій хед-лист.</div><div style="height:24px"></div>';
+    var keepNm = $('#cName') ? $('#cName').value : '';
     el.innerHTML = h;
+    if (keepNm && $('#cName')) $('#cName').value = keepNm;
     $('#bk').onclick = function () { closeCand(); };
     $('#cNew').onclick = function () {
       var b = this; b.disabled = true; haptic('medium');
@@ -1256,7 +1267,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       };
     });
     clearTimeout(S.candT);
-    if (wait) S.candT = setTimeout(function () { if ($('#detail').dataset.id === 'cand' && $('#detail').classList.contains('show')) loadCand(); }, 5000);   // чекаємо, поки відсканує
+    if (wait) candPoll();   // чекаємо, поки відсканує
   }
   function closeCand() {
     clearTimeout(S.candT); closeBiz();
