@@ -649,7 +649,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       return '<div class="grow" data-u="' + esc(a.username) + '"><div class="gh"><b>' + esc(a.name) + (a.self ? ' (я)' : '') + (a.pair ? ' <span class="gpair">🤝 ' + esc(a.pair) + '</span>' : '') + '</b><span class="gt">' +
         (a.open ? '<span class="g">● ' + inMin + ' хв</span> ' : '') + (a.overdue ? '<span class="r">⏰ ' + a.overdue + '</span> ' : '') + (a.prep ? '<span class="' + prepCls(a.prep) + '">🎯 ' + a.prep[0] + '/' + a.prep[1] + '</span> ' : '') + '🚪 ' + a.doors + '/' + n.doors + ' · 🤝 ' + a.lpr + '</span></div>' +
         '<div class="gl">' + line + '</div><div class="gs">' + q + '</div>' +
-        (a.split ? '<div class="gsp">👥 ' + a.split.map(function (c) { return esc(c.name) + ' ' + c.doors; }).join(' · ') + '</div>' : '') + '</div>';
+        (a.split ? '<div class="gsp">👥 ' + a.split.map(function (c) { return (c.l ? '<i class="q q-white" style="display:inline-block;vertical-align:-2px">' + esc(c.l) + '</i> ' : '') + esc(c.name) + ' ' + c.doors; }).join(' · ') + '</div>' : '') + '</div>';
     }
   }
   function ring(v, max, sz) {
