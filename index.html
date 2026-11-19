@@ -1048,7 +1048,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       (pr.arg ? '<div class="pcard"><details class="parg"><summary>Аргумент повністю</summary><div style="margin-top:6px;font-size:15px;line-height:1.4">' + esc(pr.arg) + '</div></details></div>' : '');
   }
   // ── 💰 Договори: що клієнти ще не оплатили, за що ще не прийшла ЗП ──
-  var DSVC = { tour: '🎥 3D-тур', serv: '🛠 Обслуговування', verif: '🔁 Верифікація', qr: '⭐ QR', site: '🌐 Сайт', ads: '📍 ADS', other: '📄 Інше' };
+  var DSVC = { tour: '🎥 3D-тур', serv: '🛠 Обслуговування', restore: '🔑 Відновлення доступу', verif: '🔁 Верифікація', qr: '⭐ QR', site: '🌐 Сайт', ads: '📍 ADS', logo: '🏷 Логотип', nfc: '📲 NFC', other: '📄 Інше' };
+  function dlab(l) { var nm = String(l.name || '').trim(); if (l.k === 'other' || !DSVC[l.k]) return '📄 ' + (nm || 'Інше'); return nm ? DSVC[l.k].split(' ')[0] + ' ' + nm.charAt(0).toUpperCase() + nm.slice(1) : DSVC[l.k]; }
   function money(n) { return String(Math.round(n || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
   function loadDeals() {
     if (DEMO) { S.deals = demoDeals(); return drawDeals(); }
@@ -1080,7 +1081,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       if (it.pay_next) sub.push('📞 оплата ' + wd(d(it.pay_next)) + ' ' + dm(d(it.pay_next)) + ' ' + t(it.pay_next));
       if (sub.length) c += '<div class="dsub">' + sub.join(' · ') + '</div>';
       L.forEach(function (l, i) {
-        c += '<div class="dln"><span class="lb">' + esc(l.k === 'other' ? '📄 ' + (l.name || 'Інше') : DSVC[l.k] || l.k) + '</span><span class="sm">' + money(l.sum) + '</span>' +
+        c += '<div class="dln"><span class="lb">' + esc(dlab(l)) + '</span><span class="sm">' + money(l.sum) + '</span>' +
           (ed ? '<button class="dck' + (l.paid ? ' on' : '') + '" data-i="' + i + '" data-w="paid">' + (l.paid ? '✓ ' : '') + '💰 Оплата</button><button class="dck' + (l.zp ? ' on' : '') + '" data-i="' + i + '" data-w="zp"' + (l.paid ? '' : ' disabled style="opacity:.45"') + '>' + (l.zp ? '✓ ' : '') + '💵 ЗП</button>'
             : '<span class="dsub">' + (l.zp ? '✓ ЗП' : l.paid ? '✓ оплачено' : 'не оплачено') + '</span>') + '</div>';
       });
@@ -1116,7 +1117,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       var eb = el.querySelector('[data-edit]');
       if (eb) eb.onclick = function () {   // ✏️: позиції текстом у поле — виправити суму, додати/прибрати послугу
         haptic();
-        var txt = (it.deal.lines || []).map(function (l) { return (l.k === 'other' ? (l.name || 'Інше') : (l.name || DSVC[l.k].replace(/^\S+\s/, ''))) + ' ' + l.sum; }).join(', ');
+        var txt = (it.deal.lines || []).map(function (l) { return (l.k === 'other' || !DSVC[l.k] ? (l.name || 'Інше') : (l.name || DSVC[l.k].replace(/^\S+\s/, ''))) + ' ' + l.sum; }).join(', ');
         el.querySelectorAll('.dln, [data-all]').forEach(function (x) { x.style.display = 'none'; });
         eb.style.display = 'none';
         el.insertAdjacentHTML('beforeend', '<div class="dsub" style="margin-top:6px">Кожна послуга через кому. Дві однакові — «обслуговування 2х7400». Оплата й ЗП лишаться на тих самих позиціях.</div>' +
