@@ -344,7 +344,9 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
 
   if (tg) {
     try { tg.ready(); tg.expand(); } catch (e) {}
-    try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {}   // свайп униз не згортає застосунок посеред набору нотатки
+    try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {}   // до першої перевірки — вимкнено; далі syncSwipe вмикає, коли можна
+    // лише два положення: відкрито на весь екран або згорнуто — «посередині» одразу розгортаємо назад
+    try { tg.onEvent && tg.onEvent('viewportChanged', function (ev) { if (ev && ev.isStateStable && !tg.isExpanded) { try { tg.expand(); } catch (x) {} } }); } catch (e) {}
     try { tg.setHeaderColor && tg.setHeaderColor('bg_color'); tg.setBackgroundColor && tg.setBackgroundColor('secondary_bg_color'); } catch (e) {}
   }
   function scheme() {
@@ -400,6 +402,22 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   function dirty() { return ['fNote', 'stWhy', 'fName', 'fLpr', 'fPhone', 'stWhen', 'payWhen', 'payWhy'].some(function (k) { var x = $('#' + k); return x && x.value !== x.defaultValue && (x.value.trim() || x.defaultValue); }) && $('#detail').classList.contains('show'); }
   function syncDirty() { try { if (!tg) return; if (dirty()) tg.enableClosingConfirmation && tg.enableClosingConfirmation(); else tg.disableClosingConfirmation && tg.disableClosingConfirmation(); } catch (e) {} }
   document.addEventListener('input', syncDirty);
+  // свайп униз будь-де згортає застосунок — але не тоді, коли картка прокручена (тоді свайп гортає її вгору) і не посеред набору тексту
+  var swipeOn = null;
+  function syncSwipe() {
+    if (!tg || !tg.enableVerticalSwipes) return;
+    var d = document.getElementById('detail'), open = d && d.classList.contains('show');
+    var ae = document.activeElement, typing = ae && (ae.tagName === 'TEXTAREA' || (ae.tagName === 'INPUT' && !/^(button|checkbox|radio)$/.test(ae.type)));
+    var on = !typing && (!open || d.scrollTop <= 0);
+    if (on === swipeOn) return;
+    swipeOn = on;
+    try { if (on) tg.enableVerticalSwipes(); else tg.disableVerticalSwipes(); } catch (e) {}
+  }
+  document.addEventListener('scroll', syncSwipe, true);
+  document.addEventListener('focusin', syncSwipe); document.addEventListener('focusout', function () { setTimeout(syncSwipe, 50); });
+  document.addEventListener('touchend', function () { setTimeout(syncSwipe, 30); }, { passive: true });
+  try { new MutationObserver(syncSwipe).observe(document.getElementById('detail'), { attributes: true, attributeFilter: ['class'] }); } catch (e) {}
+  setTimeout(syncSwipe, 300);
 
   function api(action, p) {
     if (DEMO) return Promise.resolve(demo(action, p));
