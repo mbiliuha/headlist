@@ -1205,7 +1205,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (!b) { $('#who').insertAdjacentHTML('afterend', '<button class="hdbtn" id="candBtn">👤 Кандидат</button>'); b = $('#candBtn'); }
     b.onclick = function () { openCand(); };
   }
-  var CST = { wait: '⏳ ще не відсканував', in: '🟢 у роботі', off: '🌙 день завершено — чекає рішення', gone: '— не підключився', hired: '🎓 стажер', no: '❌ не беремо' };
+  var CST = { wait: '⏳ ще не відсканував', in: '🟢 у роботі', off: '🌙 день завершено — чекає рішення', gone: '— не підключився', hired: '🎓 стажер, у полях', hold: '🎓 взяли — чекає виходу в поля', no: '❌ не беремо' };
   function openCand() { haptic(); showPanel('cand'); S.candDirty = false; drawCand(); }
   // QR малюємо прямо на телефоні (бібліотека вбудована вище — зовнішні скрипти й картинки політика сторінки не пускає)
   function qrHtml(link) {
@@ -1242,15 +1242,18 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     h += '<div class="pcard"><input class="pin" id="cName" maxlength="40" placeholder="Імʼя НОВОГО кандидата (необовʼязково)"></div>' +
       '<button class="pbtn" id="cNew">＋ ' + (r.items.length ? 'Ще один кандидат' : 'Новий кандидат') + '</button>';
     if (r.items.length) h += '<div class="pcard">' + r.items.map(function (x) {
-      var dec = x.st === 'in' || x.st === 'off';
+      var dec = (x.st === 'in' || x.st === 'off') && !x.hire, goB = x.st === 'hold' && S.me && (S.me.me.username === x.by || S.me.me.role === 'owner');
       var canNm = x.st !== 'no' && x.st !== 'gone', hire = S.me && (S.me.me.role === 'manager' || S.me.me.role === 'owner');
       return '<div class="citem"><div class="nm">' + esc(x.name) + (x.real && x.name.indexOf(x.real) < 0 ? ' · ' + esc(x.real) : '') +
         (canNm ? ' <button class="cnm" data-nm="' + esc(x.username) + '" style="border:0;background:none;color:var(--link);font-size:15px;padding:8px 8px;min-height:40px">✏️ Імʼя</button>' : '') + '</div>' +
         '<div class="cnf" data-nf="' + esc(x.username) + '" style="display:none;margin:6px 0"><div class="dadd"><input maxlength="40" placeholder="Імʼя, напр. Христина" value="' + esc(x.given ? x.real : '') + '"><button data-nsave="' + esc(x.username) + '">Зберегти</button></div></div><div class="sb">' + esc(CST[x.st] || x.st) +
         (x.st !== 'wait' && x.st !== 'gone' ? ' · 🚪 ' + x.doors + ' · 🤝 ' + x.lpr : '') + (x.date !== r.today ? ' · ' + wd(x.date) + ' ' + dm(x.date) : '') + '</div>' +
-        (dec ? '<div class="crow2">' + (hire ? '<button class="y" data-y="' + esc(x.username) + '">✅ Беремо стажером</button>' : '') + '<button class="n" data-n="' + esc(x.username) + '">❌ Не беремо</button></div>' + (hire ? '' : '<div class="sb" style="margin-top:6px">Стажером бере менеджер — скажи йому свою думку.</div>') : '') + '</div>';
+        (dec ? '<div class="crow2">' + (hire ? '<button class="y" data-y="' + esc(x.username) + '">✅ Беремо стажером</button>' : '') + '<button class="n" data-n="' + esc(x.username) + '">❌ Не беремо</button></div>' + (hire ? '' : '<div class="sb" style="margin-top:6px">Стажером бере менеджер — скажи йому свою думку.</div>') : '') +
+        (x.hire && x.st === 'in' ? '<div class="sb" style="margin-top:6px">✅ Взяли стажером. О 20:00 доступ закриється, записи перейдуть у хед-лист інструктора.</div>' : '') +
+        (goB ? '<div class="crow2"><button class="y" data-go="' + esc(x.username) + '">▶️ Вийшла в поля</button></div>' : '') +
+        (x.st === 'hold' && !goB ? '<div class="sb" style="margin-top:6px">Вихід у поля відмічає інструктор.</div>' : '') + '</div>';
     }).join('') + '</div>';
-    h += '<div class="msg" style="margin:12px 16px;line-height:1.45">Записи кандидата видно в тебе в «Команда». О 18:00 бот надішле підсумок дня: стажером бере менеджер. О 20:00 доступ кандидата закривається сам. «Не беремо» — його бізнеси переходять у твій хед-лист.</div><div style="height:24px"></div>';
+    h += '<div class="msg" style="margin:12px 16px;line-height:1.45">Записи кандидата видно в тебе в «Команда». О 18:00 бот надішле підсумок дня: стажером бере менеджер. О 20:00 доступ кандидата закривається завжди, а його записи переходять у твій хед-лист. У день виходу в поля натисни «▶️ Вийшла в поля» — наступного робочого дня записи з огляду повернуться стажеру, пізніше — у нього буде новий хед-лист. «Не беремо» — його бізнеси переходять у твій хед-лист.</div><div style="height:24px"></div>';
     var keepNm = $('#cName') ? $('#cName').value : '';
     el.innerHTML = h;
     if (keepNm && $('#cName')) $('#cName').value = keepNm;
@@ -1275,6 +1278,18 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         bt.disabled = true; haptic('medium');
         api('cand_name', { username: u, name: v }).then(function (rr) { if (rr && rr.ok === false) throw new Error(rr.error); S.candDirty = true; return loadCand(); })
           .catch(function (e) { bt.disabled = false; try { tg.showAlert(e.message && e.message.length > 12 ? e.message : errText(e)); } catch (q) {} });
+      };
+    });
+    el.querySelectorAll('[data-go]').forEach(function (bt) {
+      bt.onclick = function () {
+        var u = bt.dataset.go, it = r.items.filter(function (x) { return x.username === u; })[0];
+        var q = (it.real || it.name) + ' сьогодні вийшла в поля? Відкриється доступ до хед-листа.';
+        var go = function (ok) {
+          if (!ok) return; bt.disabled = true; haptic('medium');
+          api('cand_go', { username: u }).then(function (rr) { if (rr && rr.ok === false) throw new Error(rr.error); S.candDirty = true; try { tg.showAlert(rr.text); } catch (q) {} loadCand(); })
+            .catch(function (e) { bt.disabled = false; try { tg.showAlert(e.message && e.message.length > 12 ? e.message : errText(e)); } catch (q) {} });
+        };
+        if (tg && tg.showConfirm) { try { tg.showConfirm(q, go); return; } catch (e) {} } go(confirm(q));
       };
     });
     el.querySelectorAll('[data-y],[data-n]').forEach(function (bt) {
