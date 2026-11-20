@@ -1203,18 +1203,18 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       if (pe.dataset.id === 'prep' && pe.classList.contains('show') && !S.prep) { pe.innerHTML = '<div class="dhead"><button class="back" id="bk">‹ Назад</button></div><div class="empty">' + esc(errText(e)) + '<br><button class="reset" id="prRt">Повторити</button></div>'; $('#bk').onclick = closeBiz; $('#prRt').onclick = function () { pe.innerHTML = '<div class="spin">Завантаження…</div>'; loadPrep(); }; }
     });
   }
-  // Великий банер — лише коли підготовка «на часі»: з 16:00 (вечірня підготовка на завтра) або коли сьогоднішні зустрічі ще не підготовлені.
+  // Великий банер — лише коли підготовка «на часі»: з 18:00 (вечірня підготовка на завтра) або коли сьогоднішні зустрічі ще не підготовлені.
   // Решту дня — маленька плашка «🎯 1/2» у рядку показників угорі, щоб не висіла над днем.
   function prepState() {
     var r = S.prep; if (!r || !r.editable) return null;
     var n = r.items.length, done = r.items.filter(function (x) { return x.done; }).length;
-    var nowS = S.data ? String(S.data.now) : '', eve = t(nowS) >= '16:00', today = nowS.slice(0, 10) === r.date;
-    return { r: r, n: n, done: done, big: (n && done < n && (eve || today)) || (!n && eve) };
+    var nowS = S.data ? String(S.data.now) : '', eve = t(nowS) >= '18:00', today = nowS.slice(0, 10) === r.date;   // готуємось наприкінці дня (з 18:00) або зранку перед зустріччю
+    return { r: r, n: n, done: done, show: eve || today, big: (n && done < n && (eve || today)) || (!n && eve) };
   }
   function prepChip() {
     var old = $('#prepChip'); if (old) old.remove();
     var p = prepState(), box = $('#stats');
-    if (!p || p.big || !p.n || !box || !box.innerHTML) return;
+    if (!p || p.big || !p.show || !p.n || !box || !box.innerHTML) return;
     box.insertAdjacentHTML('afterbegin', '<span class="stat pchip' + (p.done === p.n ? ' ok' : '') + '" id="prepChip">🎯 ' + wd(p.r.date) + ' <b>' + p.done + '/' + p.n + '</b>' + (p.done === p.n ? ' ✓' : '') + '</span>');
     $('#prepChip').onclick = function () { haptic(); openPrep(); };
   }
