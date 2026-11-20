@@ -203,6 +203,7 @@
   #detail.show { display: block; }
   .dhead { background: var(--bg); padding: 14px 16px; border-bottom: 1px solid var(--sep); }
   .dhead h1 { font-size: 21px; margin: 0; line-height: 1.25; }
+  .banner, .dhead h1, .dhead .next, .gl, .gh b { overflow-wrap: anywhere; }
   .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; margin-top: 6px; padding: 3px 10px; border-radius: 999px; background: var(--bg2); }
   .next { margin-top: 8px; font-size: 15px; }
   .next.over { color: var(--red-t); font-weight: 600; }
@@ -382,7 +383,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   function haptic(k) { try { tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred(k || 'light'); } catch (e) {} }
   function hn(k) { try { tg && tg.HapticFeedback && tg.HapticFeedback.notificationOccurred(k); } catch (e) {} }
   // незбережений текст: питаємо перед закриттям
-  function dirty() { return ['fNote', 'stWhy'].some(function (k) { var x = $('#' + k); return x && x.value.trim(); }) && $('#detail').classList.contains('show'); }
+  function dirty() { return ['fNote', 'stWhy', 'fName', 'fLpr', 'fPhone', 'stWhen', 'payWhen', 'payWhy'].some(function (k) { var x = $('#' + k); return x && x.value !== x.defaultValue && (x.value.trim() || x.defaultValue); }) && $('#detail').classList.contains('show'); }
   function syncDirty() { try { if (!tg) return; if (dirty()) tg.enableClosingConfirmation && tg.enableClosingConfirmation(); else tg.disableClosingConfirmation && tg.disableClosingConfirmation(); } catch (e) {} }
   document.addEventListener('input', syncDirty);
 
@@ -790,7 +791,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var l = S.data.businesses.filter(function (b) {
       if (S.filter && b.status !== S.filter) return false;
       if (!q) return true;
-      return norm(b.name + ' ' + b.lpr_name).indexOf(q) >= 0 || (qd.length >= 3 && String(b.lpr_phone).indexOf(qd) >= 0);
+      return norm((b.name || '') + ' ' + (b.lpr_name || '')).indexOf(q) >= 0 || (qd.length >= 3 && String(b.lpr_phone || '').indexOf(qd) >= 0);
     });
     return l.length ? l.map(function (b) { return row(b, false); }).join('') : '<div class="empty">Нічого не знайдено' + (S.filter || S.q ? '<br><button class="reset" id="fReset">Скинути пошук і фільтр</button>' : '') + '</div>';
   }
@@ -922,7 +923,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     api('biz', { id: id }).then(function (r) {
       BIZ[id] = r;
       if (el.dataset.id !== id || !el.classList.contains('show')) return;
-      var typing = ['fName', 'fLpr', 'fPhone', 'fNote', 'stWhy', 'stWhen', 'stFar'].some(function (k) { var x = $('#' + k); return x && (x === document.activeElement || (k === 'fNote' || k === 'stWhy') && x.value); });
+      var typing = ['fName', 'fLpr', 'fPhone', 'fNote', 'stWhy', 'stWhen', 'stFar', 'payWhen', 'payWhy'].some(function (k) { var x = $('#' + k); return x && (x === document.activeElement || x.value !== x.defaultValue); });   // уже щось змінив — не перемальовуємо поля
       if (typing && $('#hist')) { $('#hist').innerHTML = histHtml(r.events); focusHist(); }   // не збиваємо те, що людина вже пише
       else renderBiz(r);
     }).catch(function (e) { if (!cached && !fromList) el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; else if (e && e.net && $('#hist') && !cached) $('#hist').innerHTML = '<div class="empty">Історія недоступна без звʼязку</div>'; });
@@ -1101,10 +1102,10 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       function done(res, paidAll) {
         it.deal = res.deal && res.deal.lines && res.deal.lines.length ? res.deal : it.deal;
         if (res.business) { it.business = res.business; if (res.business.next_kind !== 'payment') it.pay_next = ''; }
-        if (paidAll) { S.data = null; hn('success'); }   // наработки «дзвінок щодо оплати» оновляться при переході
+        if (paidAll) { S.stale = true; S.loadedAt = 0; hn('success'); }   // наработки «дзвінок щодо оплати» оновляться при переході
         drawDeals();
       }
-      function fail(e) { hn('error'); var m = $('#dealMsg'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } drawDeals(); }
+      function fail(e) { hn('error'); drawDeals(); var m = $('#dealMsg'); if (m) { m.className = 'msg err'; m.textContent = errText(e); } }
       el.querySelectorAll('.dck').forEach(function (bt) { bt.onclick = function () {
         haptic(); var i = +bt.dataset.i, w = bt.dataset.w, on = !bt.classList.contains('on');
         bt.disabled = true;
@@ -1114,7 +1115,11 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         }).catch(fail);
       }; });
       var ab = el.querySelector('[data-all]');
-      if (ab) ab.onclick = function () { haptic(); ab.disabled = true; ab.textContent = 'Зберігаю…'; api('deal_mark', { id: id, idx: 'all', what: 'paid', on: true }).then(function (res) { done(res, true); }).catch(fail); };
+      if (ab) ab.onclick = function () {
+        var goAll = function (yes) { if (!yes) return; haptic(); ab.disabled = true; ab.textContent = 'Зберігаю…'; api('deal_mark', { id: id, idx: 'all', what: 'paid', on: true }).then(function (res) { done(res, true); }).catch(fail); };
+        var qa = 'Клієнт оплатив усе за «' + ((it.business && it.business.name) || '') + '»?';
+        if (tg && tg.showConfirm) { try { tg.showConfirm(qa, goAll); return; } catch (e) {} } goAll(confirm(qa));
+      };
       var eb = el.querySelector('[data-edit]');
       if (eb) eb.onclick = function () {   // ✏️: позиції текстом у поле — виправити суму, додати/прибрати послугу
         haptic();
@@ -1152,7 +1157,10 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       var bn = $('#prepBn'); if (bn) bn.outerHTML = prepBanner(); bindPrepBn();
       if ($('#detail').dataset.id === 'prep' && $('#detail').classList.contains('show')) drawPrep();
       if (S.wantPrep) { S.wantPrep = false; openPrep(); }
-    }).catch(function () {});
+    }).catch(function (e) {   // не лишаємо вічне «Завантаження…»
+      var pe = $('#detail');
+      if (pe.dataset.id === 'prep' && pe.classList.contains('show') && !S.prep) { pe.innerHTML = '<div class="dhead"><button class="back" id="bk">‹ Назад</button></div><div class="empty">' + esc(errText(e)) + '<br><button class="reset" id="prRt">Повторити</button></div>'; $('#bk').onclick = closeBiz; $('#prRt').onclick = function () { pe.innerHTML = '<div class="spin">Завантаження…</div>'; loadPrep(); }; }
+    });
   }
   // Великий банер — лише коли підготовка «на часі»: з 16:00 (вечірня підготовка на завтра) або коли сьогоднішні зустрічі ще не підготовлені.
   // Решту дня — маленька плашка «🎯 1/2» у рядку показників угорі, щоб не висіла над днем.
@@ -1195,7 +1203,11 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     return '<div class="chint" style="word-break:break-all">' + esc(link) + '</div>';
   }
   // агент саме пише в полі (імʼя кандидата) — не перемальовуємо панель, інакше поле й клавіатура зникають
-  function candTyping() { var a = document.activeElement; return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && $('#detail').contains(a); }
+  function candTyping() {
+    var a = document.activeElement;
+    if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && $('#detail').contains(a)) return true;
+    return Array.prototype.some.call($('#detail').querySelectorAll('.cnf'), function (f) { return f.style.display !== 'none'; });   // відкрите поле «✏️ Імʼя»
+  }
   function candPoll() { clearTimeout(S.candT); S.candT = setTimeout(function () { if ($('#detail').dataset.id === 'cand' && $('#detail').classList.contains('show')) loadCand(true); }, 5000); }
   function loadCand(poll) {
     return api('cand').then(function (r) {
@@ -1537,13 +1549,16 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (pseg) {
       var payDo = function (what, extra) {
         var m = $('#payMsg'); m.textContent = 'Зберігаю…';
+        var pbs = Array.prototype.slice.call(pseg.querySelectorAll('button')).concat($('#payBtn') ? [$('#payBtn')] : []), plock = function (v) { pbs.forEach(function (x) { x.disabled = v; }); };
+        if (pbs.some(function (x) { return x.disabled; })) return;   // уже зберігається
+        plock(true);
         api('pay', Object.assign({ id: b.id, what: what }, extra || {})).then(function (res) {
-          if (!res.ok) { m.textContent = '❌ ' + (res.error || 'Не вдалося'); return; }
+          if (!res.ok) { plock(false); m.textContent = '❌ ' + (res.error || 'Не вдалося'); return; }
           var j = S.data.businesses.findIndex(function (x) { return x.id === b.id; });
           if (j >= 0 && res.business) S.data.businesses[j] = res.business;
           delete BIZ[b.id]; S.stale = true; cacheList(); haptic();
           openBiz(b.id); setTimeout(function () { var m2 = $('#payMsg') || $('#msg'); if (m2) m2.textContent = res.msg || '✅ Збережено'; }, 400);
-        }).catch(function (e) { m.textContent = '❌ ' + errText(e); });
+        }).catch(function (e) { plock(false); m.textContent = '❌ ' + errText(e); });
       };
       pseg.querySelectorAll('button').forEach(function (bt) { bt.onclick = function () {
         var w = bt.dataset.pw;
@@ -1845,7 +1860,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   document.querySelectorAll('.tab').forEach(function (tb) {
     tb.onclick = function () {
       document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x === tb); });
-      S.tab = tb.dataset.tab; haptic(); window.scrollTo(0, 0); if (S.data || S.tab === 'admin') render();
+      S.tab = tb.dataset.tab; haptic(); window.scrollTo(0, 0); render();
       try { var bar = $('#tabs'); bar.scrollTo({ left: tb.offsetLeft - (bar.clientWidth - tb.offsetWidth) / 2, behavior: 'smooth' }); } catch (e) {}
     };
   });
