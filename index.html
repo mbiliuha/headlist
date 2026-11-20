@@ -1549,8 +1549,9 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (!ed) h += '<div class="msg">👁 Лише перегляд.</div>';
     if (ed) h += '<div class="sec"><h2>Нотатка</h2><div class="card"><textarea id="fNote" maxlength="800" placeholder="Що нового? Напр.: подзвонив, ЛПР просив набрати в пʼятницю"></textarea></div></div>' +
       '<button class="save" id="saveBtn">Зберегти</button><div class="msg" id="msg"></div>' +
-      (b.status === 'green' ? '' : '<div class="sec"><h2>' + (isOpenSt(b.status) ? 'Перенести або змінити статус' : 'Змінити статус') + '</h2><div class="card"><div class="seg" id="stSeg">' +
-        (isOpenSt(b.status) ? '<button data-s="' + cls(b.status) + '" data-move="1">🗓 Перенести</button>' : '') + [['yellow', '🟡 Думає'], ['blue', '🔵 Зустріч'], ['white', '⚪ Вийти на ЛПР'], ['red', '🔴 Відпрац.']].map(function (x) { return '<button data-s="' + x[0] + '">' + x[1] + '</button>'; }).join('') +
+      ('<div class="sec"><h2>' + (b.status === 'green' ? '📄 Договір' : isOpenSt(b.status) ? 'Перенести або змінити статус' : 'Змінити статус') + '</h2><div class="card"><div class="seg" id="stSeg">' +
+        (b.status === 'green' ? ((b.next_dt && (b.next_kind === 'meeting' || b.next_kind === 'callback') ? '<button data-s="green" data-move="1">🗓 Перенести ' + (b.next_kind === 'meeting' ? 'зустріч' : 'дзвінок') + '</button>' : '') + '<button data-s="red" data-annul="1">🚫 Анулювати договір</button>') :
+        (isOpenSt(b.status) ? '<button data-s="' + cls(b.status) + '" data-move="1">🗓 Перенести</button>' : '') + [['yellow', '🟡 Думає'], ['blue', '🔵 Зустріч'], ['white', '⚪ Вийти на ЛПР'], ['red', '🔴 Відпрац.']].map(function (x) { return '<button data-s="' + x[0] + '">' + x[1] + '</button>'; }).join('')) +
         '</div><div id="stForm" style="display:none">' +
         '<textarea id="stWhy" maxlength="800" placeholder="Що зʼясували і чому змінюєш статус"></textarea>' +
         '<div class="field" id="stWhenF"><label>Коли</label><input id="stWhen" enterkeyhint="done" autocomplete="off" placeholder="напр. завтра 11:00 або пт 15:30"></div>' +
@@ -1607,7 +1608,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
           $('#stWhenF').style.display = pick === 'red' ? 'none' : '';
           if (!$('#stWhy').value && $('#fNote') && $('#fNote').value.trim()) { $('#stWhy').value = $('#fNote').value; $('#fNote').value = ''; }   // уже набрану нотатку не пишемо вдруге
           $('#stWhy').placeholder = b.status === 'green' ? 'Це договір. Чому анульовуємо: що сталось і що сказав клієнт' : pick === 'red' ? 'Чому відпрацьовано: що сказав власник' : bt.dataset.move ? 'Чому переносимо: що сказав ЛПР' : 'Що зʼясували і що робитимеш далі';
-          $('#stBtn').textContent = bt.dataset.move ? 'Перенести' : 'Змінити статус';
+          $('#stBtn').textContent = bt.dataset.move ? 'Перенести' : bt.dataset.annul ? 'Анулювати договір' : 'Змінити статус';
+          if (b.status === 'green' && bt.dataset.move) $('#stWhy').placeholder = 'Чому переносимо: що сказав клієнт';
           $('#stMsg').textContent = ''; $('#stMsg').className = 'msg';
           setTimeout(function () { try { $('#stBtn').scrollIntoView({ block: 'end', behavior: 'smooth' }); } catch (e) {} }, 30);   // форма зʼявляється нижче екрана — підкручуємо до неї
         };
