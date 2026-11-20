@@ -139,6 +139,7 @@
   .qd { color: var(--amber-t); font-weight: 600; }
   .note { font-size: 14px; line-height: 1.4; margin-top: 3px; color: var(--text); opacity: .8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .empty { text-align: center; color: var(--text2); padding: 28px 16px; font-size: 15px; }
+  .retry { margin-top: 14px; border: 0; border-radius: 12px; padding: 11px 22px; min-height: 44px; font: inherit; font-weight: 600; background: var(--btn); color: var(--btn-text); }
   .search { padding: 10px 12px 0; }
   .search input { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--sep); border-radius: 12px; padding: 11px 12px; min-height: 44px; outline: none; }
   .chips { display: flex; gap: 8px; padding: 10px 12px 0; overflow-x: auto; scrollbar-width: none; }
@@ -184,13 +185,13 @@
   .dcard { margin: 8px 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--bg); }
   .dhd { display: flex; align-items: baseline; gap: 8px; }
   .dhd .nm { font-weight: 600; flex: 1; min-width: 0; }
-  .ded { border: 0; background: var(--bg); border-radius: 8px; padding: 2px 8px; font-size: 14px; cursor: pointer; }
+  .ded { border: 0; background: var(--bg); border-radius: 10px; padding: 8px 12px; min-height: 40px; min-width: 44px; font-size: 16px; cursor: pointer; }
   .dtot i { display: block; font-style: normal; font-size: 11px; color: var(--text2); margin-top: 2px; }
   .dsub { font-size: 13px; color: var(--text2); margin-top: 2px; }
   .dln { display: flex; align-items: center; gap: 6px; padding: 8px 0 0; }
   .dln .lb { flex: 1; min-width: 0; font-size: 15px; }
   .dln .sm { font-weight: 600; white-space: nowrap; margin-right: 2px; }
-  .dck { border: 1.5px solid var(--sep); background: var(--bg); color: var(--text2); border-radius: 16px; padding: 5px 9px; font: inherit; font-size: 13px; white-space: nowrap; }
+  .dck { border: 1.5px solid var(--sep); background: var(--bg); color: var(--text2); border-radius: 18px; padding: 9px 12px; min-height: 40px; font: inherit; font-size: 14px; white-space: nowrap; }
   .dck.on { border-color: transparent; background: rgba(52,199,89,.16); color: #1f8a3d; font-weight: 600; }
   .dall { margin-top: 10px; width: 100%; border: 0; border-radius: 12px; padding: 11px; font: inherit; font-weight: 600; background: var(--btn); color: var(--btn-text); }
   .dadd { display: flex; gap: 6px; margin-top: 8px; }
@@ -477,6 +478,15 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     else if (S.me && S.agent && S.data && Date.now() - (S.loadedAt || 0) > 60000 && !$('#detail').classList.contains('show') && S.tab !== 'admin') load(true);
   });
   setInterval(function () { if (Q.length && !document.hidden) flushQ(); }, 60000);
+  // екран помилки з кнопкою «Повторити»
+  var RT = {};
+  function errBox(e, key, fn) { RT[key] = fn; return '<div class="empty">' + esc(errText(e)) + '<br><button class="retry" data-retry="' + key + '">🔄 Повторити</button></div>'; }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target && ev.target.closest ? ev.target.closest('[data-retry]') : null;
+    if (!t || !RT[t.dataset.retry]) return;
+    haptic(); t.disabled = true; t.textContent = 'Завантаження…';
+    try { RT[t.dataset.retry](); } catch (x) { t.disabled = false; t.textContent = '🔄 Повторити'; }
+  });
   function errText(e) {
     var m = String(e && e.message || e);
     if (m === 'auth') return 'Відкрий застосунок через бота (кнопка «📱 Хед-лист»).';
@@ -551,7 +561,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var td = S.teamDay || '', c = td ? TEAMC[td] : lsGet('hl_team_' + (S.me ? S.me.me.username : ''));
     if (c && c.agents) drawTeam(c); else $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
     api('team', td ? { date: td } : {}).then(function (r) { if (td) TEAMC[td] = r; else lsSet('hl_team_' + S.me.me.username, r); S.offline = false; drawBar(); if (S.view === 'team' && (S.teamDay || '') === td) drawTeam(r); })
-      .catch(function (e) { if (S.view !== 'team') return; if (c && e && e.net) { S.offline = true; drawBar(); return; } if (!c) $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+      .catch(function (e) { if (S.view !== 'team') return; if (c && e && e.net) { S.offline = true; drawBar(); return; } if (!c) $('#main').innerHTML = errBox(e, 'team', renderTeam); });
   }
   function drawTeam(r) {
     var n = r.norms, today = nowKyiv().slice(0, 10), isToday = r.today === today, nowT = isToday ? nowKyiv().slice(11, 16) : '23:59';
@@ -670,7 +680,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     }).catch(function (e) {
       if (cm && e && e.net) { S.offline = true; drawBar(); if (!shown && cm.agents.length && S.view !== 'team') load(); return; }
       if (e && (e.message === 'auth' || e.message === 'not_agent')) { try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('hl_') === 0 && k.indexOf('hl_q_') !== 0) localStorage.removeItem(k); }); } catch (x) {} S.data = null; }
-      $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>';
+      $('#main').innerHTML = errBox(e, 'boot', boot);
     });
   }
   function load(quiet) {
@@ -687,7 +697,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       var c = e && e.net && lsGet('hl_list_' + S.agent);
       if (c) { S.offline = true; S.data = c; BIZ = {}; drawBar(); render(); return; }
       if (quiet && S.data) return;   // тихе оновлення не вдалося — лишаємо те, що вже на екрані
-      $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>';
+      $('#main').innerHTML = errBox(e, 'load', function () { load(); });
     });
   }
 
@@ -807,7 +817,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     }).catch(function (e) {
       var c = e && e.net && lsGet('hl_day_' + S.agent);
       if (c && c.date === date) { drawDay(c); return; }
-      if (!DAYC[key] && $('#dayBox')) $('#dayBox').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>';
+      if (!DAYC[key] && $('#dayBox')) $('#dayBox').innerHTML = errBox(e, 'day', loadDay);
     });
   }
   function drawDay(r) {
@@ -926,7 +936,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       var typing = ['fName', 'fLpr', 'fPhone', 'fNote', 'stWhy', 'stWhen', 'stFar', 'payWhen', 'payWhy'].some(function (k) { var x = $('#' + k); return x && (x === document.activeElement || x.value !== x.defaultValue); });   // уже щось змінив — не перемальовуємо поля
       if (typing && $('#hist')) { $('#hist').innerHTML = histHtml(r.events); focusHist(); }   // не збиваємо те, що людина вже пише
       else renderBiz(r);
-    }).catch(function (e) { if (!cached && !fromList) el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; else if (e && e.net && $('#hist') && !cached) $('#hist').innerHTML = '<div class="empty">Історія недоступна без звʼязку</div>'; });
+    }).catch(function (e) { if (!cached && !fromList) el.innerHTML = errBox(e, 'biz', function () { openBiz(id); }); else if (e && e.net && $('#hist') && !cached) $('#hist').innerHTML = '<div class="empty">Історія недоступна без звʼязку</div>'; });
   }
   // підсвітити в історії записи, на які натиснули в «День» (той самий час, ±3 хв для пари нотатка+перенесення)
   function focusHist() {
@@ -1056,7 +1066,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   function loadDeals() {
     if (DEMO) { S.deals = demoDeals(); return drawDeals(); }
     api('deals', { agent: S.agent }).then(function (r) { S.deals = r; if (S.tab === 'deals') drawDeals(); })
-      .catch(function (e) { var bx = $('#dealBox'); if (bx) bx.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+      .catch(function (e) { var bx = $('#dealBox'); if (bx) bx.innerHTML = errBox(e, 'deals', loadDeals); });
   }
   function dealGroup(it) {
     var L = it.deal ? it.deal.lines : [];
@@ -1217,7 +1227,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       if (poll && (same || candTyping())) { candPoll(); return; }   // нічого не змінилось або агент пише — лишаємо як є
       drawCand(true);
     })
-      .catch(function (e) { if ($('#detail').dataset.id === 'cand') $('#detail').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+      .catch(function (e) { if ($('#detail').dataset.id === 'cand') $('#detail').innerHTML = errBox(e, 'cand', function () { loadCand(); }); });
   }
   function drawCand(fresh) {
     var el = $('#detail'), r = S.cand;
@@ -1233,14 +1243,14 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       '<button class="pbtn" id="cNew">＋ ' + (r.items.length ? 'Ще один кандидат' : 'Новий кандидат') + '</button>';
     if (r.items.length) h += '<div class="pcard">' + r.items.map(function (x) {
       var dec = x.st === 'in' || x.st === 'off';
-      var canNm = x.st !== 'no' && x.st !== 'gone';
+      var canNm = x.st !== 'no' && x.st !== 'gone', hire = S.me && (S.me.me.role === 'manager' || S.me.me.role === 'owner');
       return '<div class="citem"><div class="nm">' + esc(x.name) + (x.real && x.name.indexOf(x.real) < 0 ? ' · ' + esc(x.real) : '') +
-        (canNm ? ' <button class="cnm" data-nm="' + esc(x.username) + '" style="border:0;background:none;color:var(--link);font-size:14px;padding:0 4px">✏️ Імʼя</button>' : '') + '</div>' +
+        (canNm ? ' <button class="cnm" data-nm="' + esc(x.username) + '" style="border:0;background:none;color:var(--link);font-size:15px;padding:8px 8px;min-height:40px">✏️ Імʼя</button>' : '') + '</div>' +
         '<div class="cnf" data-nf="' + esc(x.username) + '" style="display:none;margin:6px 0"><div class="dadd"><input maxlength="40" placeholder="Імʼя, напр. Христина" value="' + esc(x.given ? x.real : '') + '"><button data-nsave="' + esc(x.username) + '">Зберегти</button></div></div><div class="sb">' + esc(CST[x.st] || x.st) +
         (x.st !== 'wait' && x.st !== 'gone' ? ' · 🚪 ' + x.doors + ' · 🤝 ' + x.lpr : '') + (x.date !== r.today ? ' · ' + wd(x.date) + ' ' + dm(x.date) : '') + '</div>' +
-        (dec ? '<div class="crow2"><button class="y" data-y="' + esc(x.username) + '">✅ Беремо стажером</button><button class="n" data-n="' + esc(x.username) + '">❌ Не беремо</button></div>' : '') + '</div>';
+        (dec ? '<div class="crow2">' + (hire ? '<button class="y" data-y="' + esc(x.username) + '">✅ Беремо стажером</button>' : '') + '<button class="n" data-n="' + esc(x.username) + '">❌ Не беремо</button></div>' + (hire ? '' : '<div class="sb" style="margin-top:6px">Стажером бере менеджер — скажи йому свою думку.</div>') : '') + '</div>';
     }).join('') + '</div>';
-    h += '<div class="msg" style="margin:12px 16px;line-height:1.45">Записи кандидата видно в тебе в «Команда». О 18:00 бот спитає, чи береш його стажером, о 20:00 доступ кандидата закривається сам. «Не беремо» — його бізнеси переходять у твій хед-лист.</div><div style="height:24px"></div>';
+    h += '<div class="msg" style="margin:12px 16px;line-height:1.45">Записи кандидата видно в тебе в «Команда». О 18:00 бот надішле підсумок дня: стажером бере менеджер. О 20:00 доступ кандидата закривається сам. «Не беремо» — його бізнеси переходять у твій хед-лист.</div><div style="height:24px"></div>';
     var keepNm = $('#cName') ? $('#cName').value : '';
     el.innerHTML = h;
     if (keepNm && $('#cName')) $('#cName').value = keepNm;
@@ -1339,7 +1349,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var b = (S.data && S.data.businesses.filter(function (x) { return x.id === id; })[0]) || (BIZ[id] && BIZ[id].business) || ((S.prep && S.prep.items.filter(function (x) { return x.business.id === id; })[0]) || {}).business;
     if (BIZ[id] && 'prep' in BIZ[id]) return drawPrepForm(b || BIZ[id].business, BIZ[id].prep || {});
     el.innerHTML = '<div class="spin">Завантаження…</div>';
-    api('biz', { id: id }).then(function (r) { BIZ[id] = r; if (el.dataset.id === 'prepf:' + id) drawPrepForm(r.business, r.prep || {}); }).catch(function (e) { el.innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+    api('biz', { id: id }).then(function (r) { BIZ[id] = r; if (el.dataset.id === 'prepf:' + id) drawPrepForm(r.business, r.prep || {}); }).catch(function (e) { el.innerHTML = errBox(e, 'prepf', function () { openPrepForm(id, from); }); });
   }
   function drawPrepForm(b, pr0) {
     var el = $('#detail'), f = {}, touched = !!(pr0.prod && pr0.prod.length);
@@ -1581,7 +1591,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
           $('#stForm').style.display = ''; $('#stBtn').style.display = '';
           $('#stWhenF').style.display = pick === 'red' ? 'none' : '';
           if (!$('#stWhy').value && $('#fNote') && $('#fNote').value.trim()) { $('#stWhy').value = $('#fNote').value; $('#fNote').value = ''; }   // уже набрану нотатку не пишемо вдруге
-          $('#stWhy').placeholder = pick === 'red' ? 'Чому відпрацьовано: що сказав власник' : bt.dataset.move ? 'Чому переносимо: що сказав ЛПР' : 'Що зʼясували і що робитимеш далі';
+          $('#stWhy').placeholder = b.status === 'green' ? 'Це договір. Чому анульовуємо: що сталось і що сказав клієнт' : pick === 'red' ? 'Чому відпрацьовано: що сказав власник' : bt.dataset.move ? 'Чому переносимо: що сказав ЛПР' : 'Що зʼясували і що робитимеш далі';
           $('#stBtn').textContent = bt.dataset.move ? 'Перенести' : 'Змінити статус';
           $('#stMsg').textContent = ''; $('#stMsg').className = 'msg';
           setTimeout(function () { try { $('#stBtn').scrollIntoView({ block: 'end', behavior: 'smooth' }); } catch (e) {} }, 30);   // форма зʼявляється нижче екрана — підкручуємо до неї
@@ -1724,7 +1734,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   function renderAdmin() {
     $('#stats').innerHTML = ''; $('#agentSel').style.visibility = 'hidden';
     $('#main').innerHTML = '<div class="spin">Завантаження…</div>';
-    api('admin').then(function (r) { A.data = r; drawAdmin(); }).catch(function (e) { $('#main').innerHTML = '<div class="empty">' + esc(errText(e)) + '</div>'; });
+    api('admin').then(function (r) { A.data = r; drawAdmin(); }).catch(function (e) { $('#main').innerHTML = errBox(e, 'admin', renderAdmin); });
   }
   function drawAdmin() {
     var r = A.data, ppl = {};
