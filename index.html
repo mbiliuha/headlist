@@ -1319,7 +1319,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>🎯 Підготовка</h1><div class="next">до переговорів · ' + wd(r.date) + ' ' + dm(r.date) + ' · готово <b>' + done + ' з ' + r.items.length + '</b></div></div>';
     h += '<div class="pcard">' + (r.items.length ? r.items.map(function (it) {
       var b = it.business, tm = !it.added && b.next_dt && d(b.next_dt) === r.date ? t(b.next_dt) + ' · ' : '';
-      return '<div class="pitem" data-id="' + esc(b.id) + '"><span class="ic">' + (it.done ? '✅' : '⬜') + '</span><div style="flex:1;min-width:0"><div class="nm">' + esc(b.name) + '</div><div class="sb">' + tm + (it.added ? 'додав сам' : '🔵 зустріч') + (b.lpr_name ? ' · ' + esc(b.lpr_name) : '') + '</div>' +
+      return '<div class="pitem" data-id="' + esc(b.id) + '"><span class="ic">' + (it.done ? '✅' : '⬜') + '</span><div style="flex:1;min-width:0"><div class="nm">' + esc(b.name) + '</div><div class="sb">' + tm + (it.added ? 'додав сам' : '🔵 зустріч') + (b.lpr_name ? ' · ' + esc(b.lpr_name) : '') + (it.who ? ' · 👤 ' + esc(it.who) : '') + '</div>' +
         (it.hook ? '<div class="sb" style="color:var(--text)">«' + esc(it.hook) + '»</div>' : '') + '</div>' + (it.added && r.editable ? '<button class="del" data-del="' + esc(b.id) + '">✕</button>' : '') + '</div>';
     }).join('') : '<div class="empty" style="padding:14px 0">Зустрічей на цей день немає. Додай бізнес, до якого хочеш підготуватись.</div>') + '</div>';
     if (r.editable) h += '<button class="pbtn" id="pAdd">＋ Додати бізнес</button><div id="pAddBox"></div>';
