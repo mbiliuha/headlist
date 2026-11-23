@@ -228,6 +228,9 @@
   .msg { margin: 8px 16px 0; font-size: 14px; color: var(--text2); min-height: 18px; }
   .msg.err { color: var(--red-t); }
   .ev { padding: 10px 0; border-bottom: 1px solid var(--sep); }
+  .evfix { margin-top: 6px; border: 0; background: none; color: var(--link); font: inherit; font-size: 14px; padding: 6px 0; min-height: 36px; }
+  .fixf { margin-top: 6px; padding: 10px; border-radius: 12px; background: var(--bg2); }
+  .fixf .inp { display: block; width: 100%; box-sizing: border-box; margin: 6px 0; border: 1px solid var(--sep); border-radius: 10px; padding: 10px; font: inherit; font-size: 15px; background: var(--bg); color: var(--text); min-height: 44px; }
   .ev:last-child { border-bottom: 0; }
   .evh { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--text2); }
   .evh .dot { margin-top: 0; }
@@ -1658,8 +1661,49 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (e.by) head.push('від @' + e.by);
     var nt = e.notes ? '<div class="evn">📝 ' + esc(e.notes) + '</div>' : '';
     var fl = e.flags ? '<div class="evn">⚠️ ' + esc(e.flags) + '</div>' : '';
-    return '<div class="ev" data-st="' + esc(e.start || '') + '"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span>' + head.map(esc).join(' · ') + '</div>' + txt + nt + fl + '</div>';
+    var fx = e.fix && e.id ? '<button type="button" class="evfix" data-fix="' + esc(e.id) + '">✏️ Виправити</button>' : '';
+    return '<div class="ev" data-st="' + esc(e.start || '') + '" data-ev="' + esc(e.id || '') + '"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span>' + head.map(esc).join(' · ') + '</div>' + txt + nt + fl + fx + '</div>';
   }
+  // ✏️ виправити помилково записаний візит / дзвінок (не ту кнопку натиснув)
+  document.addEventListener('click', function (ev) {
+    var bt = ev.target && ev.target.closest ? ev.target.closest('[data-fix]') : null;
+    if (!bt) return;
+    var row = bt.closest('.ev'), bid = $('#detail').dataset.id, r = BIZ[bid], e = r && r.events ? r.events.filter(function (x) { return x.id === bt.dataset.fix; })[0] : null;
+    if (!row || !e) return;
+    haptic();
+    var old = row.querySelector('.fixf'); if (old) { old.remove(); return; }
+    var f = document.createElement('div'); f.className = 'fixf';
+    f.innerHTML = '<div class="sb">Як було насправді?</div>' +
+      (e.kind === 'visit' ? '<div class="seg" data-g="who"><button type="button" data-v="L">👤 ЛПР був</button><button type="button" data-v="A">🚪 ЛПР не було</button></div>' : '') +
+      '<div class="seg" data-g="st"><button type="button" data-v="red">🔴 Відмова</button><button type="button" data-v="yellow">🟡 Думає</button><button type="button" data-v="blue">🔵 Зустріч</button><button type="button" data-v="white">⚪ Вийти на ЛПР</button></div>' +
+      '<input class="inp fxw" placeholder="Коли наступний крок: напр. «пн 12:00»" style="display:none">' +
+      '<textarea class="inp fxn" rows="3" placeholder="Що сказав ЛПР / що сталося"></textarea>' +
+      '<button type="button" class="save fxs">Зберегти виправлення</button><div class="msg fxm"></div>';
+    row.appendChild(f);
+    var val = { who: e.kind === 'visit' ? (e.who === 'L' ? 'L' : 'A') : (e.who || 'A'), st: '' };
+    f.querySelectorAll('.seg').forEach(function (g) {
+      var k = g.dataset.g;
+      g.querySelectorAll('button').forEach(function (b2) {
+        if (b2.dataset.v === val[k]) b2.classList.add('on');
+        b2.onclick = function () {
+          haptic(); val[k] = b2.dataset.v;
+          g.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b2); });
+          if (k === 'st') f.querySelector('.fxw').style.display = val.st === 'red' ? 'none' : '';
+        };
+      });
+    });
+    f.querySelector('.fxn').value = e.comment || '';
+    f.querySelector('.fxs').onclick = function () {
+      var m = f.querySelector('.fxm'), sv = this;
+      if (!val.st) { m.className = 'msg fxm err'; m.textContent = 'Обери результат.'; return; }
+      sv.disabled = true; sv.textContent = 'Зберігаю…';
+      api('event_fix', { biz: bid, id: e.id, who: val.who, status: val.st, when: f.querySelector('.fxw').value, note: f.querySelector('.fxn').value }).then(function (res) {
+        if (res && res.ok === false) throw new Error(res.error);
+        hn('success'); S.stale = true; delete BIZ[bid];
+        openBiz(bid, true);
+      }).catch(function (er) { sv.disabled = false; sv.textContent = 'Зберегти виправлення'; m.className = 'msg fxm err'; m.textContent = er && er.message && er.message.length > 8 ? er.message : errText(er); });
+    };
+  });
   function setStatus(b, to) {
     var p = { id: b.id, status: to, note: $('#stWhy').value, when: $('#stWhen').value, far: $('#stFar').value };
     var btn = $('#stBtn'), msg = $('#stMsg');
