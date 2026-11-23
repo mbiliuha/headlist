@@ -925,7 +925,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var txt = String(e.comment || e.notes || '').replace(AUTO_RE, '↪');
     var ch = e.status_before && e.status_after && e.status_before !== e.status_after ? ' ' + (ST[e.status_before] || '') + ' → ' + (ST[e.status_after] || '') : '';
     var nx = e.next_dt && e.status_after !== 'red' && e.status_after !== 'green' ? ' · ↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '';
-    var rs = RES[e.result] || '';   // результат дзвінка — одразу видно, що було
+    var rs = e.meet && e.result === 'reached' ? '📅 домовились про зустріч' : RES[e.result] || '';   // результат дзвінка — одразу видно, що було
     if (rs) ch = ' · ' + rs + ch;
     return '<div class="lrow" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + t(e.start) + '</div><div class="bd">' + (e.mate ? '👤 ' + esc(e.mate) + ' · ' : '') + ico + ' <b>' + esc(e.name || '—') + '</b>' + esc(ch + nx) + (txt ? ' — ' + esc(txt) : '') + '</div></div>';
   }
@@ -936,7 +936,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (e.kind === 'visit') {
       meta.push(e.who === 'L' ? '🤝 ЛПР' + (e.lpr_name ? ' ' + e.lpr_name : '') : e.who === 'A' ? 'адмін' : '');
       if (e.result === 'nbt') meta.push('НБТ'); else if (e.result === 'later') meta.push('⏳ просить набрати пізніше');
-    } else if (e.kind === 'call') { meta.push('📞 дзвінок'); if (RES[e.result]) meta.push(RES[e.result]); }
+    } else if (e.kind === 'call') { meta.push('📞 дзвінок'); meta.push(e.meet && e.result === 'reached' ? '📅 домовились про зустріч' : RES[e.result] || ''); }
     else if (e.kind === 'status') meta.push(e.status_before === e.status_after ? '🗓 перенесено' : '🔄 статус');
     else if (e.kind === 'note') meta.push('📝 нотатка');
     else if (e.kind === 'payment') meta.push('💰 оплата');
@@ -1659,7 +1659,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (e.kind === 'visit') { head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін'); if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') head.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt)); }
     if (e.kind === 'status') head.push(e.status_before === e.status_after ? '🗓 перенесено' + (e.next_dt ? ' на ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '') : 'статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + (ST[e.status_after || ''] || '—'));
     if (e.kind === 'call') {   // дзвінок: що було і куди далі
-      if (RES[e.result]) head.push(RES[e.result]); else if (e.who === 'L') head.push('ЛПР'); 
+      if (e.meet && e.result === 'reached') head.push('📅 домовились про зустріч'); else if (RES[e.result]) head.push(RES[e.result]);
       if (e.status_before && e.status_after && e.status_before !== e.status_after) head.push((ST[e.status_before] || '—') + ' → ' + (ST[e.status_after] || '—'));
       if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') head.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt));
     } else if (e.result === 'nbt') head.push('НБТ'); else if (e.result === 'later') head.push('⏳ просить набрати пізніше');
