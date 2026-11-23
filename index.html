@@ -1658,7 +1658,11 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var head = [ (KIND[e.kind] || '•') + ' ' + dm(e.date) + (e.start ? ' ' + t(e.start) : '') ];
     if (e.kind === 'visit') { head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін'); if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') head.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt)); }
     if (e.kind === 'status') head.push(e.status_before === e.status_after ? '🗓 перенесено' + (e.next_dt ? ' на ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '') : 'статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + (ST[e.status_after || ''] || '—'));
-    if (e.result === 'nbt') head.push('НБТ'); else if (e.result === 'later') head.push('⏳ просить набрати пізніше');
+    if (e.kind === 'call') {   // дзвінок: що було і куди далі
+      if (RES[e.result]) head.push(RES[e.result]); else if (e.who === 'L') head.push('ЛПР'); 
+      if (e.status_before && e.status_after && e.status_before !== e.status_after) head.push((ST[e.status_before] || '—') + ' → ' + (ST[e.status_after] || '—'));
+      if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') head.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt));
+    } else if (e.result === 'nbt') head.push('НБТ'); else if (e.result === 'later') head.push('⏳ просить набрати пізніше');
     if (e.door) head.push('двері');
     var txt = e.comment ? '<div class="evt">' + esc(e.comment) + '</div>' : '';
     if (e.by) head.push('від @' + e.by);
