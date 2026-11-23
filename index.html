@@ -919,11 +919,14 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     return out;
   }
   // дзвінки, нотатки, перенесення — тонким рядком між дверима
+  var RES = { nbt: '📵 НБТ', pay_nbt: '📵 НБТ (оплата)', later: '⏳ просить набрати пізніше', reached: '✅ поговорили', meeting: '❌ відмова від зустрічі', refusal: '❌ відмова', pay_moved: '💬 оплата пізніше', go_visit: '🚶 зайду особисто', annul: '🚫 договір анульовано' };
   function liteRow(e) {
     var ico = e.kind === 'call' ? '📞' : e.kind === 'payment' ? '💰' : e.kind === 'status' && e.status_before !== e.status_after ? '🔄' : e.kind === 'status' ? '🗓' : (KIND[e.kind] || '📝');
     var txt = String(e.comment || e.notes || '').replace(AUTO_RE, '↪');
     var ch = e.status_before && e.status_after && e.status_before !== e.status_after ? ' ' + (ST[e.status_before] || '') + ' → ' + (ST[e.status_after] || '') : '';
     var nx = e.next_dt && e.status_after !== 'red' && e.status_after !== 'green' ? ' · ↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '';
+    var rs = RES[e.result] || '';   // результат дзвінка — одразу видно, що було
+    if (rs) ch = ' · ' + rs + ch;
     return '<div class="lrow" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + t(e.start) + '</div><div class="bd">' + (e.mate ? '👤 ' + esc(e.mate) + ' · ' : '') + ico + ' <b>' + esc(e.name || '—') + '</b>' + esc(ch + nx) + (txt ? ' — ' + esc(txt) : '') + '</div></div>';
   }
   function dayRow(e, no) {
@@ -933,7 +936,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (e.kind === 'visit') {
       meta.push(e.who === 'L' ? '🤝 ЛПР' + (e.lpr_name ? ' ' + e.lpr_name : '') : e.who === 'A' ? 'адмін' : '');
       if (e.result === 'nbt') meta.push('НБТ'); else if (e.result === 'later') meta.push('⏳ просить набрати пізніше');
-    } else if (e.kind === 'call') { meta.push('📞 дзвінок'); if (e.result === 'nbt') meta.push('НБТ'); }
+    } else if (e.kind === 'call') { meta.push('📞 дзвінок'); if (RES[e.result]) meta.push(RES[e.result]); }
     else if (e.kind === 'status') meta.push(e.status_before === e.status_after ? '🗓 перенесено' : '🔄 статус');
     else if (e.kind === 'note') meta.push('📝 нотатка');
     else if (e.kind === 'payment') meta.push('💰 оплата');
