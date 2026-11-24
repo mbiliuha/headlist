@@ -1634,10 +1634,32 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       '<div id="payForm" style="display:none"><div class="field"><label>Коли</label><input id="payWhen" enterkeyhint="done" autocomplete="off" placeholder="напр. пт 12:00"></div>' +
       '<textarea id="payWhy" maxlength="400" placeholder="Що сказав клієнт: напр. чекає зарплату в пʼятницю"></textarea><button class="save" id="payBtn">Зберегти</button></div>' +
       '<div class="msg" id="payMsg"></div></div></div>';
-    if (ed) h += '<div class="sec"><h2>Дублі</h2><div class="card"><button class="pbtn" id="dupBtn" style="margin:0">🔗 Злити з іншою карткою…</button><div id="dupBox"></div></div></div>';
+    var canDel = ed && S.me && (S.me.me.role === 'manager' || S.me.me.role === 'owner') && b.status !== 'green';
+    if (ed) h += '<div class="sec"><h2>Дублі' + (canDel ? ' і помилкові записи' : '') + '</h2><div class="card"><button class="pbtn" id="dupBtn" style="margin:0">🔗 Злити з іншою карткою…</button><div id="dupBox"></div>' +
+      (canDel ? '<button class="pbtn" id="delBtn" style="margin:10px 0 0">🗑 Видалити запис…</button><div id="delBox" style="display:none"><div class="sb" style="margin:8px 0">Лише для помилкових записів: тест, занесено не туди. Якщо бізнес справжній, але закрився чи переїхав — краще «🔴 Відпрац.», щоб візит лишився в статистиці.</div>' +
+        '<textarea id="delWhy" maxlength="400" placeholder="Причина: напр. «тестовий запис», «дубль Bosshub»"></textarea><button class="save" id="delGo" style="background:var(--red-t)">Видалити назавжди</button><div class="msg" id="delMsg"></div></div>' : '') + '</div></div>';
     h += '<div class="sec"><h2>Історія</h2><div class="card" id="hist">' + histHtml(r.events) + '</div></div><div style="height:24px"></div>';
     el.innerHTML = h;
     if (ed) $('#dupBtn').onclick = function () { haptic(); dupPicker(b); };
+    if (canDel) {
+      $('#delBtn').onclick = function () { haptic(); $('#delBox').style.display = ''; $('#delBtn').style.display = 'none'; $('#delWhy').focus(); };
+      $('#delGo').onclick = function () {
+        var why = $('#delWhy').value.trim(), m = $('#delMsg');
+        if (why.split(/\s+/).filter(Boolean).length < 2) { m.className = 'msg err'; m.textContent = 'Напиши причину (хоча б 2 слова).'; return; }
+        var q = 'Видалити «' + b.name + '» разом з усією історією? Агент отримає повідомлення з причиною.';
+        function go(ok) {
+          if (!ok) return;
+          var bt = $('#delGo'); bt.disabled = true; bt.textContent = '…';
+          api('biz_delete', { id: b.id, why: why }).then(function (r) {
+            if (r && r.ok === false) { bt.disabled = false; bt.textContent = 'Видалити назавжди'; m.className = 'msg err'; m.textContent = r.error || 'Не вдалося'; return; }
+            hn('success');
+            if (S.data && S.data.businesses) S.data.businesses = S.data.businesses.filter(function (y) { return y.id !== b.id; });
+            delete BIZ[b.id]; cacheList(); closeBiz(); render();
+          }).catch(function (e) { bt.disabled = false; bt.textContent = 'Видалити назавжди'; m.className = 'msg err'; m.textContent = errText(e); });
+        }
+        if (tg && tg.showConfirm) { try { tg.showConfirm(q, go); return; } catch (e) {} } go(confirm(q));
+      };
+    }
     focusHist();
     $('#bk').onclick = function () { closeBiz(); };
     var pe = $('#pEdit'); if (pe) pe.onclick = function () { openPrepForm(b.id, 'biz'); };
