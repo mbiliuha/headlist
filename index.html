@@ -845,12 +845,13 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (!open.length) return '<div class="empty">Наработок немає. Час на нові двері 🚪</div>';
     var key = function (b) { return !b.next_dt ? '0' : b.plan && d(b.next_dt) <= today ? today + 'T00:00' : b.next_dt; };
     open.sort(function (a, b) { return key(a).localeCompare(key(b)); });
-    var isMeet = function (b) { return b.next_kind === 'meeting'; };
+    // «Зустрічі» — усе, де з клієнтом домовлена зустріч: картка 🔵 (навіть якщо зараз крок — дзвінок-підтвердження чи «зайди особисто») або крок «зустріч» (напр. 🟢 з допродажем)
+    var isMeet = function (b) { return b.status === 'blue' || b.next_kind === 'meeting'; };
     var nMeet = open.filter(isMeet).length;
     var list = f === 'meet' ? open.filter(isMeet) : f === 'call' ? open.filter(function (b) { return !isMeet(b); }) : open;
     var due = open.filter(function (b) { return key(b) <= now; }).length;
     var c = function (v, l, n) { return '<button class="chip tchip' + (f === v ? ' on' : '') + '" data-tf="' + v + '">' + l + ' <small>' + n + '</small></button>'; };
-    var h = '<div class="chips">' + c('', 'Усі', open.length) + c('call', '📞 Дзвінки', open.length - nMeet) + c('meet', '🔵 Зустрічі', nMeet) + '</div>';
+    var h = '<div class="chips">' + c('', 'Усі', open.length) + c('call', '📞 Дзвінки й повернення', open.length - nMeet) + c('meet', '🔵 Зустрічі', nMeet) + '</div>';
     h += '<div class="group"><div class="gtitle"><span>По черзі, зверху вниз</span><span>до виконання зараз: ' + due + '</span></div><div class="list">';
     var lined = false, lastDay = '', tomorrow = addDays(today, 1);
     list.forEach(function (b) {
