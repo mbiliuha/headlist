@@ -149,6 +149,8 @@
   .mk { display: inline-block; font-size: 13px; color: var(--text2); background: rgba(127,127,127,.14); border-radius: 6px; padding: 1px 6px; margin: 3px 4px 0 0; }
   .mk.red { color: var(--red-t); }
   .note.cl2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .dayhd { padding: 14px 16px 6px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--text2); background: var(--bg2); border-bottom: 1px solid var(--sep); }
+  .item.fut { opacity: .72; }
   .nowline { display: flex; align-items: center; gap: 8px; padding: 6px 16px; font-size: 13px; font-weight: 600; color: var(--link); }
   .nowline:before, .nowline:after { content: ''; flex: 1; height: 1px; background: var(--link); opacity: .5; }
   .chips { display: flex; gap: 8px; padding: 10px 12px 0; overflow-x: auto; scrollbar-width: none; }
@@ -827,13 +829,14 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (b.next_kind === 'payment') m.push(['💰 оплата', 0]);
     return m;
   }
-  function taskRow(b, today, now) {
+  function taskRow(b, today, now, future) {
     var dd = d(b.next_dt), late = b.next_dt && b.next_dt < now && !b.retry;
-    var tm = '<div class="time' + (late ? ' over' : '') + '">' + (b.next_dt ? (b.plan ? '🗓' : t(b.next_dt)) : '—') + (dd && dd !== today ? '<small>' + wd(dd) + ' ' + dm(dd) + '</small>' : '') + '</div>';
+    var tm = '<div class="time' + (late ? ' over' : '') + '">' + (b.next_dt ? (b.plan ? '🗓' : t(b.next_dt)) : '—') + (dd && dd < today ? '<small>' + wd(dd) + ' ' + dm(dd) + '</small>' : '') + '</div>';
     var mk = taskMarks(b, today, now).map(function (x) { return '<span class="mk' + (x[1] ? ' red' : '') + '">' + esc(x[0]) + '</span>'; }).join('');
-    return '<div class="item tint st-' + cls(b.status || 'none') + '" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + cls(b.status) + '"></span><div class="body">' +
+    var note = /^📵 НБТ ×\d+ — зайду до ЛПР особисто/.test(b.last_comment || '') ? '' : (b.last_comment || '');   // це вже є позначкою «🚪 зайди особисто»
+    return '<div class="item tint st-' + cls(b.status || 'none') + (future ? ' fut' : '') + '" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + cls(b.status) + '"></span><div class="body">' +
       '<div class="name">' + esc(b.name) + (b.who ? ' <span style="font-weight:400;color:var(--hint);font-size:13px">· ' + esc(b.who) + '</span>' : '') + '</div>' +
-      (mk ? '<div>' + mk + '</div>' : '') + (b.last_comment ? '<div class="note cl2">' + esc(b.last_comment) + '</div>' : '') + (b.queued ? '<div class="sub"><i class="qd">⏳ чекає відправки</i></div>' : '') + '</div>' +
+      (mk ? '<div>' + mk + '</div>' : '') + (note ? '<div class="note cl2">' + esc(note) + '</div>' : '') + (b.queued ? '<div class="sub"><i class="qd">⏳ чекає відправки</i></div>' : '') + '</div>' +
       (b.lpr_phone ? '<a class="rcall" href="tel:+' + esc(digits(b.lpr_phone)) + '" data-call="' + esc(digits(b.lpr_phone)) + '" data-bid="' + esc(b.id) + '" aria-label="Подзвонити">📞</a>' : '') + '</div>';
   }
   function tasksView() {
@@ -849,10 +852,15 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var c = function (v, l, n) { return '<button class="chip tchip' + (f === v ? ' on' : '') + '" data-tf="' + v + '">' + l + ' <small>' + n + '</small></button>'; };
     var h = '<div class="chips">' + c('', 'Усі', open.length) + c('call', '📞 Дзвінки', open.length - nMeet) + c('meet', '🔵 Зустрічі', nMeet) + '</div>';
     h += '<div class="group"><div class="gtitle"><span>По черзі, зверху вниз</span><span>до виконання зараз: ' + due + '</span></div><div class="list">';
-    var lined = false;
+    var lined = false, lastDay = '', tomorrow = addDays(today, 1);
     list.forEach(function (b) {
       if (!lined && key(b) > now) { lined = true; h += '<div class="nowline">зараз ' + now.slice(11, 16) + '</div>'; }
-      h += taskRow(b, today, now);
+      var dd = d(b.next_dt);
+      if (dd > today && dd !== lastDay) {   // інші дні — окремим заголовком: видно, що це вже не сьогодні
+        lastDay = dd;
+        h += '<div class="dayhd">' + (dd === tomorrow ? 'Завтра · ' : '') + wd(dd) + ' ' + dm(dd) + '</div>';
+      }
+      h += taskRow(b, today, now, dd > today);
     });
     if (!lined) h += '<div class="nowline">зараз ' + now.slice(11, 16) + '</div>';
     return h + '</div></div>';
