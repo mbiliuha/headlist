@@ -930,11 +930,12 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       mergeDay(r.rows).forEach(function (e) {   // перерви й номери дверей рахуємо по ходу дня, а показуємо в обраному порядку
         var who = e.mate || meName;
         if (pf && who !== pf) return;
-        var st = e.start, pe = prevEnd[who], gap = pe && st ? mins(pe, st) : 0, isV = e.kind === 'visit';
+        // «Усі» — пауза, лише коли ніхто з команди не був у дверях; обрана людина — її власні паузи
+        var gk = pf ? who : '*', st = e.start, pe = prevEnd[gk], gap = pe && st ? mins(pe, st) : 0, isV = e.kind === 'visit';
         if (isV && isDoor(e)) dn++;
-        var gp = isV && gap >= 30 ? '<div class="gap">⏸ ' + (multi && !pf ? esc(who) + ': ' : '') + dur(gap) + ' без дверей (' + t(pe) + '–' + t(st) + ')</div>' : '';
+        var gp = isV && gap >= 30 ? '<div class="gap">⏸ ' + (pf && multi ? esc(who) + ': ' : multi ? 'усі: ' : '') + dur(gap) + ' без дверей (' + t(pe) + '–' + t(st) + ')</div>' : '';
         if (isV || !onlyD) items.push({ gap: gp, row: isV ? dayRow(e, isDoor(e) ? dn : 0) : liteRow(e) });
-        if (isV) prevEnd[who] = e.end || e.start;
+        if (isV) { var en = e.end || e.start; if (!prevEnd[gk] || en > prevEnd[gk]) prevEnd[gk] = en; }
       });
       if (rev) items.reverse().forEach(function (it) { h += it.row + it.gap; });
       else items.forEach(function (it) { h += it.gap + it.row; });
