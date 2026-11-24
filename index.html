@@ -913,18 +913,28 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (r.split) line.push(r.split.map(function (c) { return '👤 ' + esc(c.name) + ': 🚪 <b>' + c.doors + '</b> · 🤝 <b>' + c.lpr + '</b>'; }).join(' · '));
     line = line.filter(Boolean);
     if (line.length) h += '<div class="dsum"><div class="st">' + line.join(' · ') + '</div></div>';
+    // день пари / з кандидатом: фільтр по людині і паузи кожного окремо (поки один працює, інший може стояти)
+    var meName = (S.me && S.me.agents && (S.me.agents.filter(function (a) { return a.username === r.agent; })[0] || {}).name) || 'Інструктор';
+    meName = String(meName).split(' ')[0];
+    var ppl = []; r.rows.forEach(function (e) { var k = e.mate || meName; if (ppl.indexOf(k) < 0) ppl.push(k); });
+    var pf = ppl.length > 1 && ppl.indexOf(S.dperson) >= 0 ? S.dperson : '';
+    if (ppl.length > 1) h += '<div class="dctl"><div class="dflt dppl"><button data-p=""' + (pf ? '' : ' class="on"') + '>👥 Усі</button>' +
+      ppl.map(function (k) { return '<button data-p="' + esc(k) + '"' + (pf === k ? ' class="on"' : '') + '>' + esc(k) + '</button>'; }).join('') + '</div></div>';
     if (r.rows.length > 1) h += '<div class="dctl"><div class="dflt"><button data-f="all"' + (onlyD ? '' : ' class="on"') + '>Усе</button><button data-f="doors"' + (onlyD ? ' class="on"' : '') + '>🚪 Лише двері</button></div>' +
       '<button class="ord" id="dOrd">' + (rev ? '↑ останні' : '↓ з ранку') + '</button></div>';
     if (!r.rows.length) h += '<div class="empty">' + (isToday ? 'Сьогодні ще нічого не записано' : 'Цього дня записів немає') + '</div>';
     else {
       h += '<div class="group"><div class="list">';
-      var prevEnd = '', items = [];
-      var dn = 0;
+      var prevEnd = {}, items = [];
+      var dn = 0, multi = ppl.length > 1;
       mergeDay(r.rows).forEach(function (e) {   // перерви й номери дверей рахуємо по ходу дня, а показуємо в обраному порядку
-        var st = e.start, gap = prevEnd && st ? mins(prevEnd, st) : 0, isV = e.kind === 'visit';
+        var who = e.mate || meName;
+        if (pf && who !== pf) return;
+        var st = e.start, pe = prevEnd[who], gap = pe && st ? mins(pe, st) : 0, isV = e.kind === 'visit';
         if (isV && isDoor(e)) dn++;
-        if (isV || !onlyD) items.push({ gap: isV && gap >= 30 ? '<div class="gap">⏸ ' + dur(gap) + ' без дверей</div>' : '', row: isV ? dayRow(e, isDoor(e) ? dn : 0) : liteRow(e) });
-        if (isV) prevEnd = e.end || e.start;
+        var gp = isV && gap >= 30 ? '<div class="gap">⏸ ' + (multi && !pf ? esc(who) + ': ' : '') + dur(gap) + ' без дверей (' + t(pe) + '–' + t(st) + ')</div>' : '';
+        if (isV || !onlyD) items.push({ gap: gp, row: isV ? dayRow(e, isDoor(e) ? dn : 0) : liteRow(e) });
+        if (isV) prevEnd[who] = e.end || e.start;
       });
       if (rev) items.reverse().forEach(function (it) { h += it.row + it.gap; });
       else items.forEach(function (it) { h += it.gap + it.row; });
@@ -933,7 +943,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     box.innerHTML = h + '<div style="height:24px"></div>';
     function go(k) { S.day = k; haptic(); loadDay(); }
     if ($('#dOrd')) $('#dOrd').onclick = function () { lsSet('hl_dayord', rev ? 'fwd' : 'rev'); haptic(); drawDay(r); };
-    box.querySelectorAll('.dflt button').forEach(function (b) { b.onclick = function () { lsSet('hl_dayf', b.dataset.f); haptic(); drawDay(r); }; });
+    box.querySelectorAll('.dflt:not(.dppl) button').forEach(function (b) { b.onclick = function () { lsSet('hl_dayf', b.dataset.f); haptic(); drawDay(r); }; });
+    box.querySelectorAll('.dppl button').forEach(function (b) { b.onclick = function () { S.dperson = b.dataset.p; haptic(); drawDay(r); }; });
     if (onlyD && !visits.length && r.rows.length) box.querySelector('.list').innerHTML = '<div class="empty">Цього дня дверей немає</div>';
     $('#dPrev').onclick = function () { go(addDays(date, -1)); };
     if (!isToday) { $('#dNext').onclick = function () { var nx = addDays(date, 1); go(nx >= r.today ? '' : nx); }; $('#dToday').onclick = function () { go(''); }; }
@@ -990,6 +1001,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') meta.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt));
     if (e.by) meta.push('від @' + e.by);
     if (e.mate) meta.unshift('👤 ' + e.mate);
+    if (e.with && e.with.length) meta.push('👥 разом з ' + e.with.join(', '));
     var txt = e.comment || e.notes;
     var vis = e.kind === 'visit', badge = vis ? (no ? '<span class="dno">🚪 ' + no + '</span>' : '<span class="dno rp">' + (e.status_before === 'yellow' ? 'повтор' : 'повернення') + '</span>') : '';
     return '<div class="drow' + (vis ? ' dv' + (no ? '' : ' rp') + ' st-' + cls(e.status_after || 'none') : '') + '" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + tm + '</div><div class="bd">' +
