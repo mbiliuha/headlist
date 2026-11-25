@@ -689,14 +689,14 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       var seq = a.seq || [], q = '', prevEnd = null, pend = 0, cnt = 0;
       seq.forEach(function (v) {
         var st = hm(v[0]), en = hm(v[1]);
-        if (prevEnd !== null && st !== null && st - prevEnd >= 30) pend = Math.max(pend, st - prevEnd);
+        if (prevEnd !== null && st !== null && st - prevEnd >= 20) pend = Math.max(pend, st - prevEnd);
         if (v[3]) { if (pend) q += gap(pend); pend = 0; q += '<i class="q q-' + esc(v[2] || 'white') + '">' + (v[4] ? esc(v[4]) : '') + '</i>'; cnt++; }
         if (en !== null && (prevEnd === null || en > prevEnd)) prevEnd = en;
       });
       var now = hm(nowT), inMin = 0;
       if (a.open) {
         var os = hm(String(a.open.start).slice(11, 16));
-        if (prevEnd !== null && os !== null && os - prevEnd >= 30) q += gap(os - prevEnd);
+        if (prevEnd !== null && os !== null && os - prevEnd >= 20) q += gap(os - prevEnd);
         q += '<i class="q q-now"></i>'; cnt++; inMin = Math.max(0, mins(a.open.start, nowKyiv()));
       }
       for (var i = cnt; i < n.doors; i++) q += '<i class="q q-e"></i>';
@@ -941,7 +941,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         // «Усі» — пауза, лише коли ніхто з команди не був у дверях; обрана людина — її власні паузи
         var gk = pf ? who : '*', st = e.start, pe = prevEnd[gk], gap = pe && st ? mins(pe, st) : 0, isV = e.kind === 'visit';
         if (isV && isDoor(e)) dn++;
-        var gp = isV && gap >= 30 ? '<div class="gap">⏸ ' + (pf && multi ? esc(who) + ': ' : multi ? 'усі: ' : '') + dur(gap) + ' без дверей (' + t(pe) + '–' + t(st) + ')</div>' : '';
+        var gp = isV && gap >= 20 ? '<div class="gap">⏸ ' + (pf && multi ? esc(who) + ': ' : multi ? 'усі: ' : '') + dur(gap) + ' без дверей (' + t(pe) + '–' + t(st) + ')</div>' : '';
         if (isV || !onlyD) items.push({ gap: gp, row: isV ? dayRow(e, isDoor(e) ? dn : 0) : liteRow(e) });
         if (isV) { var en = e.end || e.start; if (!prevEnd[gk] || en > prevEnd[gk]) prevEnd[gk] = en; }
       });
