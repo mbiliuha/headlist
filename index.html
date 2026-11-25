@@ -1743,29 +1743,53 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   }
   // історія: усі записи лишаються, різняться виглядом — дія агента (жирний заголовок), слова клієнта (рамка кольору статусу),
   // наступний крок (синя мітка), повідомлення бота (дрібно, сіро, з відступом); «✏️» — маленький олівець у заголовку
+  // контакт ЛПР у нотатках візиту («ЛПР Галина; 050…») — окремим рядком 👤, решта нотаток як були
+  function splitContact(notes) {
+    var nm = '', ph = '', rest = [];
+    String(notes || '').split(/;\s*/).forEach(function (x) {
+      var v = x.trim(), m;
+      if (!v) return;
+      if (!nm && (m = /^ЛПР\s+([A-ZА-ЯІЇЄҐ][^,;:\d]{1,40})$/.exec(v)) && m[1].trim().split(/\s+/).length <= 4) { nm = m[1].trim(); return; }   // «ЛПР не було, …» — не імʼя
+      if (!ph && /^\+?[\d\s()\-]{9,18}$/.test(v) && v.replace(/\D/g, '').length >= 9) { ph = v.replace(/\D/g, ''); return; }
+      rest.push(v);
+    });
+    if (ph && ph.charAt(0) === '0') ph = '38' + ph;
+    return { nm: nm, ph: ph, rest: rest.join('; ') };
+  }
   function evRow(e) {
     var when = dm(e.date) + (e.start ? ' ' + t(e.start) : ''), nx = '';
     if (e.kind === 'reminder') return '<div class="ev evbot" data-st="' + esc(e.start || '') + '" data-ev="' + esc(e.id || '') + '">' + (e.result === 'reminder_missed' ? '⚠️' : '🔔') + ' ' + esc(when) + ' · бот: ' + esc(String(e.comment || '').replace(/^(🔔|🔁|⚠️)\s*/, '')) + '</div>';
-    var head = [(KIND[e.kind] || '•') + ' ' + when];
-    var step = function () { if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') nx = '↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt); };
-    if (e.kind === 'visit') { head.push('візит', (e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін'); step(); }
+    var head = [(KIND[e.kind] || '•') + ' ' + when], res = '';
+    var step = function () {
+      if (!e.next_dt || e.status_after === 'red' || e.status_after === 'green') return;
+      var nd = d(e.next_dt), lb = e.result === 'nbt' ? 'набрати ще раз' : e.result === 'later' ? 'набрати' : e.meet ? 'зустріч' : '';
+      nx = '↪ ' + (lb ? lb + ' · ' : '') + (nd === e.date ? '' : wd(nd) + ' ' + dm(nd) + ' ') + t(e.next_dt);
+    };
+    if (e.kind === 'visit') {   // 🚪 уже каже «візит»; «адмін» = ЛПР не було на місці
+      head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР був' : 'ЛПР не було');
+      if (!e.door) head.push('не в норму дверей');   // зазвичай візит іде в «Двері» — позначаємо лише виняток
+      if (e.result === 'nbt') res = '📵 набрав ЛПР — не взяв трубку';   // хто набирав (агент зі свого чи адмін) бот не знає
+      else if (e.result === 'later') res = '⏳ набрав ЛПР — просить набрати пізніше';
+      step();
+    }
     if (e.kind === 'status') { if (e.status_before === e.status_after) { head.push('🗓 перенесено'); step(); } else { head.push('статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + (ST[e.status_after || ''] || '—')); step(); } }
     if (e.kind === 'call') {   // дзвінок: що було і куди далі
       head.push('дзвінок');
       if (e.meet && e.result === 'reached') head.push('📅 домовились про зустріч'); else if (RES[e.result]) head.push(RES[e.result]);
       if (e.status_before && e.status_after && e.status_before !== e.status_after) head.push((ST[e.status_before] || '—') + ' → ' + (ST[e.status_after] || '—'));
       step();
-    } else if (e.result === 'nbt') head.push('НБТ'); else if (e.result === 'later') head.push('⏳ просить набрати пізніше');
-    if (e.kind === 'note' && e.next_dt) { /* нотатка — без кроку */ }
+    } else if (e.kind !== 'visit') { if (e.result === 'nbt') head.push('НБТ'); else if (e.result === 'later') head.push('⏳ просить набрати пізніше'); }
     if (e.by) head.push('від @' + e.by);
     var main = e.kind === 'visit' || e.kind === 'call' || e.kind === 'message';
+    var sc = main ? splitContact(e.notes) : { nm: '', ph: '', rest: e.notes || '' };
+    var rs = res ? '<div class="evn">' + esc(res) + '</div>' : '';
+    var ct = sc.nm || sc.ph ? '<div class="evn">👤 ' + esc(sc.nm || 'ЛПР') + (sc.ph ? ' · +' + esc(sc.ph) : '') + '</div>' : '';
     var q = e.comment ? '<div class="evq q-' + cls(e.status_after || 'white') + '-b">' + esc(e.comment) + '</div>' : '';
-    var nt = e.notes ? '<div class="evn">📝 ' + esc(e.notes) + '</div>' : '';
+    var nt = sc.rest ? '<div class="evn">📝 ' + esc(sc.rest) + '</div>' : '';
     var fl = e.flags ? '<div class="evn">⚠️ ' + esc(e.flags) + '</div>' : '';
-    if (e.door) head.push('двері');
     var nxh = nx ? '<span class="evnx">' + esc(nx) + '</span>' : '';
     var fx = e.fix && e.id ? '<button type="button" class="evfix" data-fix="' + esc(e.id) + '" aria-label="Виправити запис">✏️</button>' : '';
-    return '<div class="ev' + (main ? ' evmain' : '') + (e.kind === 'visit' && e.who === 'L' ? ' evlpr' : '') + '" data-st="' + esc(e.start || '') + '" data-ev="' + esc(e.id || '') + '"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span><span class="evht">' + head.map(esc).join(' · ') + '</span>' + fx + '</div>' + q + nt + fl + nxh + '</div>';
+    return '<div class="ev' + (main ? ' evmain' : '') + (e.kind === 'visit' && e.who === 'L' ? ' evlpr' : '') + '" data-st="' + esc(e.start || '') + '" data-ev="' + esc(e.id || '') + '"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span><span class="evht">' + head.map(esc).join(' · ') + '</span>' + fx + '</div>' + rs + ct + q + nt + fl + nxh + '</div>';
   }
   // ✏️ виправити помилково записаний візит / дзвінок (не ту кнопку натиснув)
   document.addEventListener('click', function (ev) {
