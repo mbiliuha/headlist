@@ -673,7 +673,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       var list = inOff(sel === '*' ? (offs[0] ? offs[0].id : '') : sel);
       list.sort(function (x, y) { return (y.open ? 1 : 0) - (x.open ? 1 : 0) || y.doors - x.doors || String(x.name).localeCompare(String(y.name)); });
       h += sumLine(list) + '<div class="gbox">' + list.map(function (a) { return gRow(a); }).join('') +
-        (list.length ? '<div class="glegend">Квадрат — одні двері по порядку в кольорі результату · ☕ — перерва від 30 хв · пунктир — скільки до норми · рамка — зараз у дверях</div>' : '<div class="empty">Поки немає агентів.</div>') + '</div>';
+        (list.length ? '<div class="glegend">Квадрат — одні двері по порядку в кольорі результату · ☕ — перерва від 20 хв · пунктир — скільки до норми · рамка — зараз у дверях</div>' : '<div class="empty">Поки немає агентів.</div>') + '</div>';
     }
     if (!ag.length) h += '<div class="empty">Поки немає агентів.</div>';
     $('#main').innerHTML = h;
