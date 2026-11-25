@@ -235,7 +235,15 @@
   .msg { margin: 8px 16px 0; font-size: 14px; color: var(--text2); min-height: 18px; }
   .msg.err { color: var(--red-t); }
   .ev { padding: 10px 0; border-bottom: 1px solid var(--sep); }
-  .evfix { margin-top: 6px; border: 0; background: none; color: var(--link); font: inherit; font-size: 14px; padding: 6px 0; min-height: 36px; }
+  .evfix { margin-left: auto; flex: none; border: 0; background: none; font: inherit; font-size: 16px; padding: 0 2px 0 8px; min-height: 32px; min-width: 32px; opacity: .75; }
+  .evht { flex: 1; min-width: 0; }
+  .ev.evmain .evh { color: var(--text); font-weight: 600; }
+  .ev.evlpr { background: var(--bg2); margin: 0 -16px; padding: 10px 16px; }
+  .evq { font-size: 15px; line-height: 1.4; margin-top: 6px; padding: 6px 10px; border-left: 3px solid var(--gray); background: var(--bg2); white-space: pre-wrap; word-wrap: break-word; }
+  .ev.evlpr .evq { background: var(--bg); }
+  .q-yellow-b { border-left-color: var(--yellow); } .q-blue-b { border-left-color: var(--blue); } .q-green-b { border-left-color: var(--green); } .q-red-b { border-left-color: var(--red); }
+  .evnx { display: inline-block; margin-top: 6px; font-size: 13px; padding: 2px 8px; border-radius: 6px; background: rgba(59,130,246,.12); color: var(--link); }
+  .ev.evbot { padding: 5px 0 5px 18px; font-size: 13px; color: var(--hint); border-bottom: 1px dashed var(--sep); }
   .fixf { margin-top: 6px; padding: 10px; border-radius: 12px; background: var(--bg2); }
   .fixf .inp { display: block; width: 100%; box-sizing: border-box; margin: 6px 0; border: 1px solid var(--sep); border-radius: 10px; padding: 10px; font: inherit; font-size: 15px; background: var(--bg); color: var(--text); min-height: 44px; }
   .ev:last-child { border-bottom: 0; }
@@ -1733,22 +1741,31 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       $('#stBtn').onclick = function () { setStatus(b, pick); };
     }
   }
+  // історія: усі записи лишаються, різняться виглядом — дія агента (жирний заголовок), слова клієнта (рамка кольору статусу),
+  // наступний крок (синя мітка), повідомлення бота (дрібно, сіро, з відступом); «✏️» — маленький олівець у заголовку
   function evRow(e) {
-    var head = [ (KIND[e.kind] || '•') + ' ' + dm(e.date) + (e.start ? ' ' + t(e.start) : '') ];
-    if (e.kind === 'visit') { head.push((e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін'); if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') head.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt)); }
-    if (e.kind === 'status') head.push(e.status_before === e.status_after ? '🗓 перенесено' + (e.next_dt ? ' на ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt) : '') : 'статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + (ST[e.status_after || ''] || '—'));
+    var when = dm(e.date) + (e.start ? ' ' + t(e.start) : ''), nx = '';
+    if (e.kind === 'reminder') return '<div class="ev evbot" data-st="' + esc(e.start || '') + '" data-ev="' + esc(e.id || '') + '">' + (e.result === 'reminder_missed' ? '⚠️' : '🔔') + ' ' + esc(when) + ' · бот: ' + esc(String(e.comment || '').replace(/^(🔔|🔁|⚠️)\s*/, '')) + '</div>';
+    var head = [(KIND[e.kind] || '•') + ' ' + when];
+    var step = function () { if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') nx = '↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt); };
+    if (e.kind === 'visit') { head.push('візит', (e.minutes || 0) + ' хв', e.who === 'L' ? 'ЛПР' : 'адмін'); step(); }
+    if (e.kind === 'status') { if (e.status_before === e.status_after) { head.push('🗓 перенесено'); step(); } else { head.push('статус: ' + (ST[e.status_before || ''] || '—') + ' → ' + (ST[e.status_after || ''] || '—')); step(); } }
     if (e.kind === 'call') {   // дзвінок: що було і куди далі
+      head.push('дзвінок');
       if (e.meet && e.result === 'reached') head.push('📅 домовились про зустріч'); else if (RES[e.result]) head.push(RES[e.result]);
       if (e.status_before && e.status_after && e.status_before !== e.status_after) head.push((ST[e.status_before] || '—') + ' → ' + (ST[e.status_after] || '—'));
-      if (e.next_dt && e.status_after !== 'red' && e.status_after !== 'green') head.push('↪ ' + wd(d(e.next_dt)) + ' ' + dm(d(e.next_dt)) + ' ' + t(e.next_dt));
+      step();
     } else if (e.result === 'nbt') head.push('НБТ'); else if (e.result === 'later') head.push('⏳ просить набрати пізніше');
-    if (e.door) head.push('двері');
-    var txt = e.comment ? '<div class="evt">' + esc(e.comment) + '</div>' : '';
+    if (e.kind === 'note' && e.next_dt) { /* нотатка — без кроку */ }
     if (e.by) head.push('від @' + e.by);
+    var main = e.kind === 'visit' || e.kind === 'call' || e.kind === 'message';
+    var q = e.comment ? '<div class="evq q-' + cls(e.status_after || 'white') + '-b">' + esc(e.comment) + '</div>' : '';
     var nt = e.notes ? '<div class="evn">📝 ' + esc(e.notes) + '</div>' : '';
     var fl = e.flags ? '<div class="evn">⚠️ ' + esc(e.flags) + '</div>' : '';
-    var fx = e.fix && e.id ? '<button type="button" class="evfix" data-fix="' + esc(e.id) + '">✏️ Виправити</button>' : '';
-    return '<div class="ev" data-st="' + esc(e.start || '') + '" data-ev="' + esc(e.id || '') + '"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span>' + head.map(esc).join(' · ') + '</div>' + txt + nt + fl + fx + '</div>';
+    if (e.door) head.push('двері');
+    var nxh = nx ? '<span class="evnx">' + esc(nx) + '</span>' : '';
+    var fx = e.fix && e.id ? '<button type="button" class="evfix" data-fix="' + esc(e.id) + '" aria-label="Виправити запис">✏️</button>' : '';
+    return '<div class="ev' + (main ? ' evmain' : '') + (e.kind === 'visit' && e.who === 'L' ? ' evlpr' : '') + '" data-st="' + esc(e.start || '') + '" data-ev="' + esc(e.id || '') + '"><div class="evh"><span class="dot s-' + cls(e.status_after) + '"></span><span class="evht">' + head.map(esc).join(' · ') + '</span>' + fx + '</div>' + q + nt + fl + nxh + '</div>';
   }
   // ✏️ виправити помилково записаний візит / дзвінок (не ту кнопку натиснув)
   document.addEventListener('click', function (ev) {
