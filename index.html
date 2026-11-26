@@ -136,6 +136,11 @@
   .stx.t-yellow { color: var(--amber-t); } .stx.t-blue { color: var(--blue-t); } .stx.t-green { color: var(--green-t); } .stx.t-red { color: var(--red-t); }
   .rcall { flex: none; width: 44px; height: 44px; margin: -2px -6px 0 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg2); text-decoration: none; font-size: 18px; }
   .rcall:active { opacity: .6; }
+  .cpbtn { margin-top: 6px; border: 1px dashed var(--link); background: transparent; color: var(--link); border-radius: 10px; padding: 5px 10px; font-size: 14px; font-weight: 600; }
+  .cpsc { white-space: pre-wrap; line-height: 1.4; font-size: 15px; }
+  .cpsc b { display: block; margin: 10px 0 2px; }
+  .cpsc i { color: var(--hint); }
+  .cpsc .cpno { color: #c0392b; }
   .qd { color: var(--amber-t); font-weight: 600; }
   .note { font-size: 14px; line-height: 1.4; margin-top: 3px; color: var(--text); opacity: .8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .empty { text-align: center; color: var(--text2); padding: 28px 16px; font-size: 15px; }
@@ -346,6 +351,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   var tg = window.Telegram && window.Telegram.WebApp;
   var DEMO = /[?&]demo=1/.test(location.search);
   var WANTPREP = /[?&]v=prep/.test(location.search);
+  var WANTCP = (/[?&]v=cprep/.test(location.search) && (location.search.match(/[?&]id=([^&]+)/) || [])[1]) || '';   // 📞 з кнопки бота «Підготуватись до дзвінка»
   // режим Apps Script: сторінка в iframe Google, initData беремо з адреси верхнього вікна
   var GAS = !!(window.google && google.script && google.script.run);
   var INIT = tg && tg.initData ? tg.initData : '';
@@ -740,6 +746,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       Q.forEach(function (it) { var b = data.businesses.filter(function (x) { return x.id === it.p.id; })[0]; if (b && !it.err) { if (it.action === 'status') b.status = it.p.status; b.queued = true; } });
       cacheList(); drawBar(); if (!$('#detail').classList.contains('show') || !quiet) render(); else S.stale = true; prefetch(data.businesses.filter(function (b) { return isOpenSt(b.status) || b.next_kind === 'payment'; }));
       if (Q.length) flushQ();
+      if (WANTCP) { var cpi = decodeURIComponent(WANTCP); WANTCP = ''; openCallPrep(cpi); }
       if (!S.prep || S.prep.agent !== S.agent) S.prep = null;
       loadPrep();
     }).catch(function (e) {
@@ -819,6 +826,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   $('#main').addEventListener('click', function (ev) {
     var c = ev.target.closest ? ev.target.closest('.rcall') : null;
     if (c) return window.callNum(ev, c.dataset.bid, c.dataset.call);
+    var cpb = ev.target.closest ? ev.target.closest('[data-cp]') : null;
+    if (cpb) { ev.stopPropagation(); return openCallPrep(cpb.dataset.cp); }
     var it = ev.target.closest ? ev.target.closest('.item[data-id]') : null;
     if (it && !ev.target.closest('a,button')) openBiz(it.dataset.id);
   });
@@ -844,7 +853,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var note = /^📵 НБТ ×\d+ — зайду до ЛПР особисто/.test(b.last_comment || '') ? '' : (b.last_comment || '');   // це вже є позначкою «🚪 зайди особисто»
     return '<div class="item tint st-' + cls(b.status || 'none') + (future ? ' fut' : '') + '" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + cls(b.status) + '"></span><div class="body">' +
       '<div class="name">' + esc(b.name) + (b.who ? ' <span style="font-weight:400;color:var(--hint);font-size:13px">· ' + esc(b.who) + '</span>' : '') + '</div>' +
-      (mk ? '<div>' + mk + '</div>' : '') + (note ? '<div class="note cl2">' + esc(note) + '</div>' : '') + (b.queued ? '<div class="sub"><i class="qd">⏳ чекає відправки</i></div>' : '') + '</div>' +
+      (mk ? '<div>' + mk + '</div>' : '') + (note ? '<div class="note cl2">' + esc(note) + '</div>' : '') + (cpOk(b) ? '<button type="button" class="cpbtn" data-cp="' + esc(b.id) + '">🎯 Підготуватись до дзвінка ЛПР</button>' : '') + (b.queued ? '<div class="sub"><i class="qd">⏳ чекає відправки</i></div>' : '') + '</div>' +
       (b.lpr_phone ? '<a class="rcall" href="tel:+' + esc(digits(b.lpr_phone)) + '" data-call="' + esc(digits(b.lpr_phone)) + '" data-bid="' + esc(b.id) + '" aria-label="Подзвонити">📞</a>' : '') + '</div>';
   }
   function tasksView() {
@@ -1625,6 +1634,89 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
         if (/перше речення/i.test(String(e && e.message))) { var hk = $('#pHook'); if (hk) { hk.scrollIntoView({ block: 'center', behavior: 'smooth' }); hk.focus(); } }
       });
     };
+  }
+  // ── 📞 підготовка до дзвінка ЛПР після адміна (тестово: S.me.me.cprep) ──
+  // ЛПР не було, номер узяли в адміна → перед дзвінком: що з профілем у Google, запит, хто вище — і шпаргалка за скриптом «Дзвінок (ціль — зустріч з ЛПР)»
+  function cpOk(b) { return !!(S.me && S.me.me && S.me.me.cprep && b && b.status === 'white' && b.lpr_phone && b.next_kind !== 'meeting'); }
+  var CPV = [['yes', '✅ Є, підтверджений'], ['no', '⚠️ Є, не підтверджений'], ['none', '❌ Профілю немає']];
+  function cpPain(c) {
+    var q = c.q ? '«' + c.q + '»' : '(ключове слово)', nb = (c.nb || []).filter(Boolean), nbt = nb.length ? nb.join(' і ') : '(пара інших бізнесів)';
+    var tail = ', тому коли я загуглив ' + q + ', мені підтягнулись ' + nbt + ', а вас взагалі немає.';
+    if (c.ver === 'yes') return 'Ваш бізнес є на Гугл мапс, але ви як власник бізнесу не використовуєте безкоштовний функціонал, що дає Google, і через це не впливаєте на пошукову систему' + tail;
+    if (c.ver === 'no') return 'Ваш бізнес є на Гугл мапс, але ви не до кінця пройшли процедуру підтвердження, через це ви як власник бізнесу не можете використовувати безкоштовний функціонал, що дає Google, і не можете впливати на пошукову систему' + tail;
+    if (c.ver === 'none') return 'Ви як власник бізнесу не використовуєте безкоштовний функціонал, що дає Google, і через це не впливаєте на пошукову систему' + tail;
+    return '';
+  }
+  function cpScript(b, c) {
+    var lpr = b.lpr_name || '(імʼя ЛПР)', ag = S.me && (S.me.agents || []).filter(function (a) { return a.username === S.agent; })[0], me = String((ag && ag.name) || (S.me && S.me.me && S.me.me.name) || '').split(' ')[0] || '(твоє імʼя)';   // говорить агент, чий це хед
+    var where = '«' + b.name + '»' + (c.addr ? ', ' + c.addr : '');
+    var pain = cpPain(c);
+    var meet = 'Завтра в мене з 12 по 16 вже заплановані зустрічі з вашими сусідами, тому можемо зустрітись до 12 або після 16. На яку годину домовляємось?';
+    return '<b>1️⃣ Привітання</b>' + esc(lpr) + ', доброго дня! <i>(пауза, чекаємо відповідь)</i>\nВаш номер телефону мені дали в ' + esc(where) + '.' +
+      '<b>2️⃣ Причина дзвінка</b>Дивіться, з якого питання телефоную. Мене звати ' + esc(me) + ', я є офіційним партнером компанії Google в Україні. На наступному тижні тут по вашій вулиці буде проходити оновлення формату відображення всіх бізнесів у Google. З цього приводу ми інформуємо власників на місцях, як це працює і що для цього потрібно.' +
+      '<b>3️⃣ Призначення зустрічі</b>Сьогодні – завтра можем з вами зустрітись?\n<i>Фіксуй конкретну годину. Зустрічі розписані похвилинно — час треба спланувати заздалегідь.</i>' +
+      '<b>Якщо «давайте завтра»</b>' + meet +
+      '<b>Якщо «А що це? Навіщо зустрічатись? Що ви пропонуєте?»</b>Дивіться, у звʼязку з ситуацією в країні Google періодично оновлює функції відображення бізнесів. Деякі з них зараз можуть бути заблоковані або працювати неефективно. Моє завдання – провести з вами 10-хвилинний безкоштовний аналіз, дати рекомендації, як працювати з пошуковою системою Google зараз. Але для цього потрібно призначити конкретну годину зустрічі. На коли домовляємось?' +
+      '<b>Якщо «наберіть мене завтра, я не знаю, коли там буду»</b>' + esc(lpr) + ', розумію, ви людина зайнята, я тому заздалегідь телефоную, щоб домовитись про конкретну годину.\n<i>Погоджується →</i> ' + meet +
+      '\n<i>Не дає конкретики, петляє →</i> Я вас зрозумів, тоді дивіться, в чому суть: ' + (pain ? esc(pain) : '<i>(точка болю — заповни профіль і запит вище)</i>') + ' Але для того, щоб я міг допомогти це виправити, потрібно зустрітись, бо я працюю локально і не працюю по виклику. На коли домовляємось?' +
+      '<b>Якщо у відпустці / відрядженні (довше 2–3 днів, до 2 тижнів)</b>Розумію, так як оновлення від Гугл йде масштабне і зустрічі з вашими сусідами розписані на декілька днів (тижнів) вперед, думаю, на цій локації я точно буду працювати ще мінімум 2–3 дні (2–3 тижні). Давайте узгодимо, коли мені заздалегідь вас набрати, щоб ми могли домовитись на конкретну годину.\n<i>Набери за день до приїзду.</i>' +
+      '<b>Якщо ЛПР в іншому місті й тут не буває</b>Пропонуй онлайн-зустріч (Zoom, Google Meet, месенджери). В крайньому випадку — запис екрану з аналізом і презентацією по його бізнесу в месенджер.' +
+      '<b class="cpno">🚫 Під час дзвінка не можна</b>❌ Говорити про послуги, які ми пропонуємо.\n❌ Говорити про вартість послуг.\n❌ Відповідати на «Що ви продаєте?» — дзвінок не про продаж, а про корисну інформацію для бізнесу.';
+  }
+  function openCallPrep(id) {
+    haptic(); var el = showPanel('cprep:' + id);
+    if (BIZ[id] && 'cprep' in BIZ[id]) return drawCallPrep(BIZ[id]);
+    el.innerHTML = '<div class="spin">Завантаження…</div>';
+    api('biz', { id: id }).then(function (r) { BIZ[id] = r; if (el.dataset.id === 'cprep:' + id) drawCallPrep(r); }).catch(function (e) { el.innerHTML = errBox(e, 'cprep', function () { openCallPrep(id); }); });
+  }
+  function drawCallPrep(r) {
+    var el = $('#detail'), b = r.business, c = JSON.parse(JSON.stringify(r.cprep || {})); c.nb = (c.nb || []).slice(); while (c.nb.length < 2) c.nb.push('');
+    var lv = (r.events || []).filter(function (e) { return e.kind === 'visit'; })[0];   // останній візит — що сказав адмін
+    var adm = lv ? [lv.comment, lv.notes].filter(Boolean).join(' · ') : '';
+    var h = '<div class="dhead"><button class="back" id="bk">‹ Назад</button><h1>' + esc(b.name) + '</h1><div class="next">📞 Дзвінок ЛПР · ціль — зустріч</div></div>';
+    h += '<div class="pcard"><div class="plbl">Що знаємо з візиту</div><div class="sb">👤 ' + esc(b.lpr_name || 'імʼя ЛПР невідоме') + ' · +' + esc(digits(b.lpr_phone)) + '</div>' +
+      (adm ? '<div class="sb" style="margin-top:4px;color:var(--text2)">📝 ' + esc(adm) + (lv && lv.start ? ' <i style="color:var(--hint)">(' + dm(d(lv.start)) + ' ' + t(lv.start) + ')</i>' : '') + '</div>' : '') +
+      '<input id="cAddr" class="pin" style="margin-top:8px" maxlength="80" placeholder="Адреса — щоб ЛПР зрозумів, про яку точку мова" value="' + esc(c.addr || '') + '"></div>';
+    h += '<div class="pcard"><div class="plbl">1 · Подивись бізнес у Google</div><div class="psrch"><button id="cG">🗺 Google Карти</button><button id="cA">✨ Gemini</button></div>' +
+      '<div class="pcnt" style="text-align:left">Gemini перевірить профіль, підкаже запит і хто показується вище. Перенеси відповідь сюди ⬇️</div></div>';
+    h += '<div class="pcard"><div class="plbl">2 · Профіль у Google</div><div class="pchips" id="cVer"></div></div>';
+    h += '<div class="pcard"><div class="plbl">3 · Запит і хто вище в пошуку</div><input id="cQ" class="pin" maxlength="80" placeholder="напр. «аптека Чернівці центр»" value="' + esc(c.q || '') + '">' +
+      '<input id="cN0" class="pin" style="margin-top:6px" maxlength="60" placeholder="бізнес поруч, що вище" value="' + esc(c.nb[0]) + '"><input id="cN1" class="pin" style="margin-top:6px" maxlength="60" placeholder="ще один" value="' + esc(c.nb[1]) + '"></div>';
+    h += '<div class="pcard"><div class="plbl">📋 Шпаргалка на дзвінок</div><div class="cpsc" id="cSc"></div></div>';
+    h += '<button class="save" id="cSave">💾 Зберегти підготовку</button>' +
+      '<button class="save" id="cCall" style="margin-top:8px;background:#2e7d4f">📞 Дзвонити ' + esc(b.lpr_name || 'ЛПР') + '</button><div class="msg" id="cMsg"></div><div style="height:24px"></div>';
+    el.innerHTML = h;
+    function rd() { c.addr = $('#cAddr').value.trim(); c.q = $('#cQ').value.trim(); c.nb = [$('#cN0').value.trim(), $('#cN1').value.trim()]; }
+    function sc() { rd(); $('#cSc').innerHTML = cpScript(b, c); }
+    function vers() {
+      $('#cVer').innerHTML = CPV.map(function (o) { return '<button class="pchip' + (o[0] !== 'yes' ? ' bad' : '') + (c.ver === o[0] ? ' on' : '') + '" data-cv="' + o[0] + '">' + o[1] + '</button>'; }).join('');
+      $('#cVer').querySelectorAll('[data-cv]').forEach(function (bt) { bt.onclick = function () { haptic(); c.ver = c.ver === bt.dataset.cv ? '' : bt.dataset.cv; vers(); sc(); }; });
+    }
+    ['#cAddr', '#cQ', '#cN0', '#cN1'].forEach(function (k) { $(k).oninput = sc; });
+    $('#bk').onclick = function () { closeBiz(); };
+    $('#cG').onclick = function () { rd(); openLnk('https://www.google.com/maps/search/' + encodeURIComponent(b.name + (c.addr ? ' ' + c.addr : ''))); };
+    $('#cA').onclick = function () {
+      rd();
+      var pr = 'Бізнес «' + b.name + '»' + (c.addr ? ', ' + c.addr : '') + '. Я маю подзвонити власнику' + (b.lpr_name ? ' (' + b.lpr_name + ')' : '') + ' і домовитись про зустріч. Перевір у Google Картах і коротко, пунктами, без вступу:\n' +
+        '1) Чи є профіль у Google Картах і чи підтверджений він власником (якщо на профілі є «Ви власник цього бізнесу?» — не підтверджений).\n' +
+        '2) 3 запити, якими клієнти шукають такий бізнес поруч.\n' +
+        '3) За найважливішим запитом: які 2 заклади поруч показуються вище і на якому місці цей бізнес (або що його немає взагалі).\n' +
+        '4) Рейтинг, скільки відгуків, чи відповідає власник на відгуки.';
+      var ok = copyTxt(pr);
+      try { tg.showAlert(ok ? 'Запит для Gemini скопійовано — встав його там.' : 'Скопіюй запит:\n\n' + pr, function () { openLnk('https://gemini.google.com/app'); }); } catch (e) { openLnk('https://gemini.google.com/app'); }
+    };
+    function save(then) {
+      rd();
+      if (!c.ver) { $('#cMsg').textContent = 'Відміть, що з профілем у Google — від цього залежить точка болю.'; return; }
+      $('#cMsg').textContent = 'Зберігаю…';
+      api('prep_save', { id: b.id, kind: 'call', prep: { ver: c.ver, q: c.q, nb: c.nb, addr: c.addr } }).then(function (x) {
+        if (x && x.ok === false) { $('#cMsg').textContent = x.error || 'Не вдалося'; return; }
+        BIZ[b.id] = Object.assign({}, BIZ[b.id] || r, { cprep: x.cprep }); $('#cMsg').textContent = '✅ Збережено'; if (then) then();
+      }).catch(function (e) { $('#cMsg').textContent = errText(e); });
+    }
+    $('#cSave').onclick = function () { haptic(); save(); };
+    $('#cCall').onclick = function (ev) { if (c.ver) save(); window.callNum(ev, b.id, b.lpr_phone); };
+    vers(); sc();
   }
   function prepBack() {
     var id = ($('#detail').dataset.id || '').slice(6);
