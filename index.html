@@ -136,6 +136,8 @@
   .stx.t-yellow { color: var(--amber-t); } .stx.t-blue { color: var(--blue-t); } .stx.t-green { color: var(--green-t); } .stx.t-red { color: var(--red-t); }
   .rcall { flex: none; width: 44px; height: 44px; margin: -2px -6px 0 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--bg2); text-decoration: none; font-size: 18px; }
   .rcall:active { opacity: .6; }
+  .ctrow { display: flex; align-items: center; gap: 8px; }
+  .ctlpr { flex: none; border: 1px solid var(--sep); background: var(--bg2); border-radius: 10px; padding: 6px 8px; font-size: 13px; color: var(--link); }
   .cpbtn { margin-top: 6px; border: 1px dashed var(--link); background: transparent; color: var(--link); border-radius: 10px; padding: 5px 10px; font-size: 14px; font-weight: 600; }
   .cpsc { white-space: pre-wrap; line-height: 1.4; font-size: 15px; }
   .cpsc b { display: block; margin: 10px 0 2px; }
@@ -1023,6 +1025,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (e.by) meta.push('від @' + e.by);
     if (e.mate) meta.unshift('👤 ' + e.mate);
     if (e.with && e.with.length) meta.push('👥 разом з ' + e.with.join(', '));
+    if (e.contacts && e.contacts.length) meta.push('☎️ ' + e.contacts.join(', ') + ' (не ЛПР)');
     var txt = e.comment || e.notes;
     var vis = e.kind === 'visit', badge = vis ? (no ? '<span class="dno">🚪 ' + no + '</span>' : '<span class="dno rp">' + (e.status_before === 'yellow' ? 'повтор' : 'повернення') + '</span>') : '';
     return '<div class="drow' + (vis ? ' dv' + (no ? '' : ' rp') + ' st-' + cls(e.status_after || 'none') : '') + '" data-id="' + esc(e.business_id) + '" data-st="' + esc(e.start) + '" data-en="' + esc(e.end || e.start) + '"><div class="tm">' + tm + '</div><div class="bd">' +
@@ -1759,6 +1762,11 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       '<div class="field"><label>ЛПР</label><input id="fLpr" enterkeyhint="done" autocomplete="off" value="' + esc(b.lpr_name) + '" placeholder="імʼя"' + (ed ? '' : ' disabled') + '></div>' +
       '<div class="field"><label>Телефон</label><input id="fPhone" type="tel" inputmode="tel" enterkeyhint="done" autocomplete="off" value="' + esc(b.lpr_phone) + '" placeholder="380…"' + (ed ? '' : ' disabled') + '>' + phone + '</div>' +
       '</div></div>';
+    // ☎️ контакти, що не ЛПР (адмін, керуюча, директор…): дзвінок і «Це ЛПР»
+    if (r.contacts && r.contacts.length) h += '<div class="sec"><h2>Контакти (не ЛПР)</h2><div class="card">' + r.contacts.map(function (c, i) {
+      return '<div class="field ctrow"><div style="flex:1;min-width:0"><div><b>' + esc(c.role || 'контакт') + '</b>' + (c.name ? ' ' + esc(c.name) : '') + '</div><div style="color:var(--hint);font-size:14px">+' + esc(digits(c.phone)) + '</div></div>' +
+        '<a class="rcall" href="tel:+' + esc(digits(c.phone)) + '" data-ctcall="' + i + '" aria-label="Подзвонити">📞</a>' + (ed ? '<button type="button" class="ctlpr" data-ctlpr="' + i + '">👤 Це ЛПР</button>' : '') + '</div>';
+    }).join('') + '</div></div>';
     if (!ed) h += '<div class="msg">👁 Лише перегляд.</div>';
     if (ed) h += '<div class="sec"><h2>Нотатка</h2><div class="card"><textarea id="fNote" maxlength="800" placeholder="Що нового? Напр.: подзвонив, ЛПР просив набрати в пʼятницю"></textarea></div></div>' +
       '<button class="save" id="saveBtn">Зберегти</button><div class="msg" id="msg"></div>' +
@@ -1805,6 +1813,20 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     $('#bk').onclick = function () { closeBiz(); };
     var pe = $('#pEdit'); if (pe) pe.onclick = function () { openPrepForm(b.id, 'biz'); };
     var cpe = $('#cpEdit'); if (cpe) cpe.onclick = function () { openCallPrep(b.id); };
+    el.querySelectorAll('[data-ctcall]').forEach(function (a) { a.onclick = function (ev) {
+      ev.preventDefault(); ev.stopPropagation(); var c = r.contacts[+a.dataset.ctcall];
+      if (!(tg && tg.platform && tg.platform !== 'unknown') || DEMO) { location.href = 'tel:+' + digits(c.phone); return; }
+      haptic('medium'); api('call', { id: b.id, ct: +a.dataset.ctcall }).then(function () { callToast(digits(c.phone)); }).catch(function (e) { try { tg.showAlert(errText(e)); } catch (x) {} });
+    }; });
+    el.querySelectorAll('[data-ctlpr]').forEach(function (bt) { bt.onclick = function () {
+      var c = r.contacts[+bt.dataset.ctlpr], go = function () {
+        haptic(); bt.disabled = true;
+        apiW('update', { id: b.id, ct_lpr: +bt.dataset.ctlpr }).then(function (x) { if (x && x.ok === false) { bt.disabled = false; try { tg.showAlert(x.error || 'Не вдалося'); } catch (e2) {} return; } delete BIZ[b.id]; openBiz(b.id); load(true); })
+          .catch(function (e) { bt.disabled = false; try { tg.showAlert(errText(e)); } catch (e2) {} });
+      };
+      var q = (c.name || c.role) + ' — це ЛПР? Номер +' + digits(c.phone) + ' стане номером ЛПР' + (b.lpr_phone ? ', а попередній ЛПР лишиться контактом.' : '.');
+      try { tg.showConfirm(q, function (ok) { if (ok) go(); }); } catch (e) { if (confirm(q)) go(); }
+    }; });
     var cb = $('#callBtn'); if (cb) cb.onclick = function (ev) { return window.callNum(ev, b.id, b.lpr_phone); };
     if (ed) $('#saveBtn').onclick = function () { save(b); };
     var pseg = $('#paySeg');
@@ -1896,6 +1918,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var sc = main ? splitContact(e.notes) : { nm: '', ph: '', rest: e.notes || '' };
     var rs = res ? '<div class="evn">' + esc(res) + '</div>' : '';
     var ct = sc.nm || sc.ph ? '<div class="evn">👤 ' + esc(sc.nm || 'ЛПР') + (sc.ph ? ' · +' + esc(sc.ph) : '') + '</div>' : '';
+    if (e.contacts && e.contacts.length) ct += '<div class="evn">☎️ розмовляв(ла) з: ' + esc(e.contacts.map(function (c) { return [c.role, c.name].filter(Boolean).join(' ') + ' · +' + digits(c.phone); }).join('; ')) + ' <i style="color:var(--hint)">(не ЛПР)</i></div>';
     var q = e.comment ? '<div class="evq q-' + cls(e.status_after || 'white') + '-b">' + esc(e.comment) + '</div>' : '';
     var nt = sc.rest ? '<div class="evn">📝 ' + esc(sc.rest) + '</div>' : '';
     var fl = e.flags ? '<div class="evn">⚠️ ' + esc(e.flags) + '</div>' : '';
