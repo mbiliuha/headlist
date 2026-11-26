@@ -351,7 +351,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   var tg = window.Telegram && window.Telegram.WebApp;
   var DEMO = /[?&]demo=1/.test(location.search);
   var WANTPREP = /[?&]v=prep/.test(location.search);
-  var WANTCP = (/[?&]v=cprep/.test(location.search) && (location.search.match(/[?&]id=([^&]+)/) || [])[1]) || '';   // 📞 з кнопки бота «Підготуватись до дзвінка»
+  var WANTCP = /[?&]v=cprep/.test(location.search) ? (/[?&]ov=1/.test(location.search) ? 'ov' : ((location.search.match(/[?&]id=([^&]+)/) || [])[1] || '')) : '';   // 📞 з кнопки бота «Підготуватись до дзвінка»
   // режим Apps Script: сторінка в iframe Google, initData беремо з адреси верхнього вікна
   var GAS = !!(window.google && google.script && google.script.run);
   var INIT = tg && tg.initData ? tg.initData : '';
@@ -853,7 +853,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     var note = /^📵 НБТ ×\d+ — зайду до ЛПР особисто/.test(b.last_comment || '') ? '' : (b.last_comment || '');   // це вже є позначкою «🚪 зайди особисто»
     return '<div class="item tint st-' + cls(b.status || 'none') + (future ? ' fut' : '') + '" data-id="' + esc(b.id) + '">' + tm + '<span class="dot s-' + cls(b.status) + '"></span><div class="body">' +
       '<div class="name">' + esc(b.name) + (b.who ? ' <span style="font-weight:400;color:var(--hint);font-size:13px">· ' + esc(b.who) + '</span>' : '') + '</div>' +
-      (mk ? '<div>' + mk + '</div>' : '') + (note ? '<div class="note cl2">' + esc(note) + '</div>' : '') + (cpOk(b) ? '<button type="button" class="cpbtn" data-cp="' + esc(b.id) + '">🎯 Підготуватись до дзвінка ЛПР</button>' : '') + (b.queued ? '<div class="sub"><i class="qd">⏳ чекає відправки</i></div>' : '') + '</div>' +
+      (mk ? '<div>' + mk + '</div>' : '') + (note ? '<div class="note cl2">' + esc(note) + '</div>' : '') + (b.queued ? '<div class="sub"><i class="qd">⏳ чекає відправки</i></div>' : '') + '</div>' +
       (b.lpr_phone ? '<a class="rcall" href="tel:+' + esc(digits(b.lpr_phone)) + '" data-call="' + esc(digits(b.lpr_phone)) + '" data-bid="' + esc(b.id) + '" aria-label="Подзвонити">📞</a>' : '') + '</div>';
   }
   function tasksView() {
@@ -1473,9 +1473,19 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   function openPrepForm(id, from) {
     haptic(); var el = showPanel('prepf:' + id); S.prepFrom = from;
     var b = (S.data && S.data.businesses.filter(function (x) { return x.id === id; })[0]) || (BIZ[id] && BIZ[id].business) || ((S.prep && S.prep.items.filter(function (x) { return x.business.id === id; })[0]) || {}).business;
-    if (BIZ[id] && 'prep' in BIZ[id]) return drawPrepForm(b || BIZ[id].business, BIZ[id].prep || {});
+    if (BIZ[id] && 'prep' in BIZ[id]) return drawPrepForm(b || BIZ[id].business, prepWithCall(BIZ[id].prep, BIZ[id].cprep));
     el.innerHTML = '<div class="spin">Завантаження…</div>';
-    api('biz', { id: id }).then(function (r) { BIZ[id] = r; if (el.dataset.id === 'prepf:' + id) drawPrepForm(r.business, r.prep || {}); }).catch(function (e) { el.innerHTML = errBox(e, 'prepf', function () { openPrepForm(id, from); }); });
+    api('biz', { id: id }).then(function (r) { BIZ[id] = r; if (el.dataset.id === 'prepf:' + id) drawPrepForm(r.business, prepWithCall(r.prep, r.cprep)); }).catch(function (e) { el.innerHTML = errBox(e, 'prepf', function () { openPrepForm(id, from); }); });
+  }
+  // те, що агент уже зʼясував перед дзвінком ЛПР, — у підготовку до переговорів (не заповнювати вдруге)
+  function prepWithCall(pr, cp) {
+    var x = Object.assign({}, pr || {});
+    if (!cp) return x;
+    if (!x.ver && cp.ver) x.ver = cp.ver;
+    if (!(x.qs && x.qs.length) && !x.q && cp.q) x.qs = [{ q: cp.q, pos: '' }];
+    if (!x.who && cp.addr) x.who = cp.addr;
+    if (!x.note && cp.nb && cp.nb.length) x.note = 'Перед дзвінком: за «' + (cp.q || 'запитом') + '» вище показувались ' + cp.nb.join(', ') + '.';
+    return x;
   }
   function drawPrepForm(b, pr0) {
     var el = $('#detail'), f = {}, touched = !!(pr0.prod && pr0.prod.length);
@@ -1637,7 +1647,6 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   }
   // ── 📞 підготовка до дзвінка ЛПР після адміна (тестово: S.me.me.cprep) ──
   // ЛПР не було, номер узяли в адміна → перед дзвінком: що з профілем у Google, запит, хто вище — і шпаргалка за скриптом «Дзвінок (ціль — зустріч з ЛПР)»
-  function cpOk(b) { return !!(S.me && S.me.me && S.me.me.cprep && b && b.status === 'white' && b.lpr_phone && b.next_kind !== 'meeting'); }
   var CPV = [['yes', '✅ Є, підтверджений'], ['no', '⚠️ Є, не підтверджений'], ['none', '❌ Профілю немає']];
   function cpPain(c) {
     var q = c.q ? '«' + c.q + '»' : '(ключове слово)', nb = (c.nb || []).filter(Boolean), nbt = nb.length ? nb.join(' і ') : '(пара інших бізнесів)';
@@ -1665,9 +1674,12 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
   }
   function openCallPrep(id) {
     haptic(); var el = showPanel('cprep:' + id);
-    if (BIZ[id] && 'cprep' in BIZ[id]) return drawCallPrep(BIZ[id]);
+    if (id !== 'ov' && BIZ[id] && BIZ[id].cprep) return drawCallPrep(BIZ[id]);
     el.innerHTML = '<div class="spin">Завантаження…</div>';
-    api('biz', { id: id }).then(function (r) { BIZ[id] = r; if (el.dataset.id === 'cprep:' + id) drawCallPrep(r); }).catch(function (e) { el.innerHTML = errBox(e, 'cprep', function () { openCallPrep(id); }); });
+    api('biz', id === 'ov' ? { ov: 1 } : { id: id }).then(function (r) {
+      if (r && r.gone) { el.innerHTML = '<div class="dhead"><button class="back" id="bk">‹ Назад</button></div><div class="empty">' + esc(r.error) + '</div>'; $('#bk').onclick = function () { closeBiz(); }; return; }
+      if (id !== 'ov') BIZ[id] = r; if (el.dataset.id === 'cprep:' + id) drawCallPrep(r);
+    }).catch(function (e) { el.innerHTML = errBox(e, 'cprep', function () { openCallPrep(id); }); });
   }
   function drawCallPrep(r) {
     var el = $('#detail'), b = r.business, c = JSON.parse(JSON.stringify(r.cprep || {})); c.nb = (c.nb || []).slice(); while (c.nb.length < 2) c.nb.push('');
@@ -1709,13 +1721,13 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       rd();
       if (!c.ver) { $('#cMsg').textContent = 'Відміть, що з профілем у Google — від цього залежить точка болю.'; return; }
       $('#cMsg').textContent = 'Зберігаю…';
-      api('prep_save', { id: b.id, kind: 'call', prep: { ver: c.ver, q: c.q, nb: c.nb, addr: c.addr } }).then(function (x) {
+      api('prep_save', Object.assign(r.ov ? { ov: 1 } : { id: b.id }, { kind: 'call', prep: { ver: c.ver, q: c.q, nb: c.nb, addr: c.addr } })).then(function (x) {
         if (x && x.ok === false) { $('#cMsg').textContent = x.error || 'Не вдалося'; return; }
-        BIZ[b.id] = Object.assign({}, BIZ[b.id] || r, { cprep: x.cprep }); $('#cMsg').textContent = '✅ Збережено'; if (then) then();
+        r.cprep = x.cprep; if (!r.ov) BIZ[b.id] = Object.assign({}, BIZ[b.id] || r, { cprep: x.cprep }); $('#cMsg').textContent = '✅ Збережено' + (r.ov ? ' — після виходу буде в картці бізнесу' : ''); if (then) then();
       }).catch(function (e) { $('#cMsg').textContent = errText(e); });
     }
     $('#cSave').onclick = function () { haptic(); save(); };
-    $('#cCall').onclick = function (ev) { if (c.ver) save(); window.callNum(ev, b.id, b.lpr_phone); };
+    $('#cCall').onclick = function (ev) { if (c.ver) save(); if (r.ov) { ev.preventDefault(); location.href = 'tel:+' + digits(b.lpr_phone); return; } window.callNum(ev, b.id, b.lpr_phone); };
     vers(); sc();
   }
   function prepBack() {
@@ -1735,6 +1747,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       (b.queued ? '<div class="msg" style="margin:8px 0 0">⏳ Є невідправлені зміни — підуть самі, коли зʼявиться звʼязок.</div>' : '') + '</div>';
     if (r.prep && r.prep.hook) h += prepCardHtml(r.prep) + (ed ? '<button class="pbtn" id="pEdit">✏️ Змінити підготовку</button>' : '');
     else if (ed && b.status !== 'red' && b.status !== 'green') h += '<button class="pbtn" id="pEdit">🎯 Підготуватись до переговорів</button>';
+    if (S.me && S.me.me && S.me.me.cprep && (r.cprep || (b.status === 'white' && b.lpr_phone))) h += '<button class="pbtn" id="cpEdit">📞 ' + (r.cprep ? 'Підготовка до дзвінка ЛПР' : 'Підготуватись до дзвінка ЛПР') + '</button>';
     h += '<div class="sec"><h2>Контакт</h2><div class="card">' +
       '<div class="field"><label>Назва</label><input id="fName" enterkeyhint="done" autocomplete="off" value="' + esc(b.name) + '"' + (ed ? '' : ' disabled') + '></div>' +
       '<div class="field"><label>ЛПР</label><input id="fLpr" enterkeyhint="done" autocomplete="off" value="' + esc(b.lpr_name) + '" placeholder="імʼя"' + (ed ? '' : ' disabled') + '></div>' +
@@ -1785,6 +1798,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     focusHist();
     $('#bk').onclick = function () { closeBiz(); };
     var pe = $('#pEdit'); if (pe) pe.onclick = function () { openPrepForm(b.id, 'biz'); };
+    var cpe = $('#cpEdit'); if (cpe) cpe.onclick = function () { openCallPrep(b.id); };
     var cb = $('#callBtn'); if (cb) cb.onclick = function (ev) { return window.callNum(ev, b.id, b.lpr_phone); };
     if (ed) $('#saveBtn').onclick = function () { save(b); };
     var pseg = $('#paySeg');
