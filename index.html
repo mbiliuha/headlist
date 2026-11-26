@@ -1703,8 +1703,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     h += '<div class="pcard"><div class="plbl">3 · Запит і хто вище в пошуку</div><input id="cQ" class="pin" maxlength="80" placeholder="напр. «аптека Чернівці центр»" value="' + esc(c.q || '') + '">' +
       '<input id="cN0" class="pin" style="margin-top:6px" maxlength="60" placeholder="бізнес поруч, що вище" value="' + esc(c.nb[0]) + '"><input id="cN1" class="pin" style="margin-top:6px" maxlength="60" placeholder="ще один" value="' + esc(c.nb[1]) + '"></div>';
     h += '<div class="pcard"><div class="plbl">📋 Шпаргалка на дзвінок</div><div class="cpsc" id="cSc"></div></div>';
-    h += '<button class="save" id="cSave">💾 Зберегти підготовку</button>' +
-      '<button class="save" id="cCall" style="margin-top:8px;background:#2e7d4f">📞 Дзвонити ' + esc(b.lpr_name || 'ЛПР') + '</button><div class="msg" id="cMsg"></div><div style="height:24px"></div>';
+    h += '<button class="save" id="cSave">💾 Зберегти підготовку</button><div class="msg" id="cMsg"></div><div style="height:24px"></div>';   // номер ЛПР уже є в чаті й у картці — третя кнопка «Дзвонити» зайва
     el.innerHTML = h;
     function rd() { c.addr = $('#cAddr').value.trim(); c.q = $('#cQ').value.trim(); c.nb = [$('#cN0').value.trim(), $('#cN1').value.trim()]; }
     function sc() { rd(); $('#cSc').innerHTML = cpScript(b, c); }
@@ -1731,11 +1730,10 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       $('#cMsg').textContent = 'Зберігаю…';
       api('prep_save', Object.assign(r.ov ? { ov: 1 } : { id: b.id }, { kind: 'call', prep: { ver: c.ver, q: c.q, nb: c.nb, addr: c.addr } })).then(function (x) {
         if (x && x.ok === false) { $('#cMsg').textContent = x.error || 'Не вдалося'; return; }
-        r.cprep = x.cprep; if (!r.ov) BIZ[b.id] = Object.assign({}, BIZ[b.id] || r, { cprep: x.cprep }); $('#cMsg').textContent = '✅ Збережено' + (r.ov ? ' — після виходу буде в картці бізнесу' : ''); if (then) then();
+        r.cprep = x.cprep; if (!r.ov) BIZ[b.id] = Object.assign({}, BIZ[b.id] || r, { cprep: x.cprep }); $('#cMsg').textContent = '✅ Збережено' + (r.ov ? '. Закрий це вікно — у чаті тисни «🚪 Вийшов», підготовка перейде в картку бізнесу.' : ''); if (then) then();
       }).catch(function (e) { $('#cMsg').textContent = errText(e); });
     }
     $('#cSave').onclick = function () { haptic(); save(); };
-    $('#cCall').onclick = function (ev) { if (c.ver) save(); window.callNum(ev, r.ov ? 'ov' : b.id, b.lpr_phone); };   // номер приходить у чат — без переходу, що обриває збереження
     vers(); sc();
   }
   function prepBack() {
