@@ -574,6 +574,8 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     if (!me.agents.length) { S.tab = 'admin'; document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('on', x.dataset.tab === 'admin'); }); }
     chrome();
     drawBar();
+    // 📞 кнопка бота «Підготуватись до дзвінка» — одразу на екран підготовки (і в керівника, що стартує з панелі команди)
+    if (WANTCP && me.me.cprep) { var cpi = decodeURIComponent(WANTCP); WANTCP = ''; setTimeout(function () { openCallPrep(cpi); }, 0); }
   }
   // шапка під поточний екран: панель команди або хед-лист конкретного агента
   function chrome() {
@@ -746,7 +748,6 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
       Q.forEach(function (it) { var b = data.businesses.filter(function (x) { return x.id === it.p.id; })[0]; if (b && !it.err) { if (it.action === 'status') b.status = it.p.status; b.queued = true; } });
       cacheList(); drawBar(); if (!$('#detail').classList.contains('show') || !quiet) render(); else S.stale = true; prefetch(data.businesses.filter(function (b) { return isOpenSt(b.status) || b.next_kind === 'payment'; }));
       if (Q.length) flushQ();
-      if (WANTCP) { var cpi = decodeURIComponent(WANTCP); WANTCP = ''; openCallPrep(cpi); }
       if (!S.prep || S.prep.agent !== S.agent) S.prep = null;
       loadPrep();
     }).catch(function (e) {
@@ -1657,7 +1658,7 @@ window.qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=
     return '';
   }
   function cpScript(b, c) {
-    var lpr = b.lpr_name || '(імʼя ЛПР)', ag = S.me && (S.me.agents || []).filter(function (a) { return a.username === S.agent; })[0], me = String((ag && ag.name) || (S.me && S.me.me && S.me.me.name) || '').split(' ')[0] || '(твоє імʼя)';   // говорить агент, чий це хед
+    var lpr = b.lpr_name || '(імʼя ЛПР)', ag = b.id === 'ov' ? null : S.me && (S.me.agents || []).filter(function (a) { return a.username === S.agent; })[0], me = String((ag && ag.name) || (S.me && S.me.me && S.me.me.name) || '').split(' ')[0] || '(твоє імʼя)';   // говорить агент, чий це хед
     var where = '«' + b.name + '»' + (c.addr ? ', ' + c.addr : '');
     var pain = cpPain(c);
     var meet = 'Завтра в мене з 12 по 16 вже заплановані зустрічі з вашими сусідами, тому можемо зустрітись до 12 або після 16. На яку годину домовляємось?';
